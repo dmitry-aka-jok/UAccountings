@@ -14,8 +14,10 @@ class QmlSql : public QObject
 public:
     explicit QmlSql(Datapipe *datapipe, QObject *parent = nullptr);
 
-    Q_INVOKABLE QmlSqlTable* table(QString name, QVariantMap fields);
+    Q_INVOKABLE void defineTable(QString name, QVariantMap fields);
+    Q_INVOKABLE QmlSqlTable *table(QString name);
 
+    static QString formatToSQL(QVariant val);
 signals:
 
 private:

@@ -9,17 +9,24 @@
 #include <QSqlDatabase>
 #include <QSqlError>
 
+#include <QQmlContext>
+
 #include <QDebug>
 #include <QFile>
 
 #include "build_defs.h"
 #include "classes/datapipe.h"
 #include "classes/qmlsql.h"
+#include "classes/qmlsqltable.h"
+#include "classes/qmlsqlmodel.h"
+#include "classes/qmlcellproperty.h"
 
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+
+//    app.setWindowIcon(QIcon(QT_ICON_PATH)); // iconless on taskbar? not anymore.
 
     app.setOrganizationName("Majister");
     app.setOrganizationDomain("uvelirsoft.com.ua");
@@ -146,10 +153,21 @@ int main(int argc, char *argv[])
     const QUrl url(u"qrc:/UAccounting/main.qml"_qs);
 //    engine.addImportPath("qrc:////modules"); // modules
 
-    QmlSql qmlsql(datapipe);
-    qmlRegisterSingletonInstance("SQL.package",1,0, "SQL", &qmlsql);
+    //qmlRegisterSingletonInstance("UA.Settings",1,0, "Datapipe", datapipe);
+    engine.rootContext()->setContextProperty("datapipe", datapipe);
 
-    qmlRegisterType<QmlSqlTable>("SQL.package",1,0, "SQLTable");
+
+    QmlSql qmlsql(datapipe);
+    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQL", &qmlsql);
+
+    qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
+    qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");
+
+
+    qmlRegisterType<QmlCellProperty>("UA.Cell",1,0, "Property");
+
+
+//    qmlRegisterUncreatableMetaObject(MetaTypeNamespace::staticMetaObject, "UA.Types", 0, 1, "MetaType", "Access to enums & flags only");
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {

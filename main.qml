@@ -8,9 +8,9 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 
 
-import "qml"
+import "scripts/init.js" as Init
 
-import SQL.package
+import UA.SQL
 
 
 ApplicationWindow {
@@ -19,6 +19,11 @@ ApplicationWindow {
     height: 768
     title: qsTr("UAccounting")
     visible: true
+
+    Component.onCompleted: {
+        Init.database()
+        //console.log("Test")
+    }
 
 
     QtObject {
@@ -35,18 +40,17 @@ ApplicationWindow {
 
         property int margins: 10
 
+        property int tableMinimalWidth: 50
+        property int tableDefaultWidthNumber: 50
+        property int tableDefaultWidthString: 400
+        property int tableDefaultWidthBool: 50
+
         property font headerFont: Qt.font({family: 'Encode Sans', weight: Font.Black, italic: false, pointSize: 16})
         property font tableFont: Qt.font({family: 'Encode Sans', italic: false, pointSize: 16 })
         property font textFont: Qt.font({family: 'Encode Sans', italic: false, pointSize: 16 })
         property font menuFont: Qt.font({family: 'Encode Sans', italic: false, pointSize: 16 })
     }
 
-    Database {
-        id: database
-    }
-
-    Component.onCompleted: {
-    }
 
 
     ListModel {

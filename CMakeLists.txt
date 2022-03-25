@@ -18,9 +18,14 @@ qt_add_executable(appUAccounting
     classes/qmlsql.cpp
     classes/qmlsqltable.h
     classes/qmlsqltable.cpp
+    classes/qmlsqlmodel.h
+    classes/qmlsqlmodel.cpp
+    classes/qmlcellproperty.h
+    classes/qmlcellproperty.cpp
     resources.qrc
     main.cpp
 )
+
 
 
 
@@ -28,12 +33,31 @@ qt_add_qml_module(appUAccounting
     URI UAccounting
     VERSION 1.0
     QML_FILES
-    modules/DrawerItem.qml
     modules/Template.qml
     modules/Tests.qml
 
-    qml/Database.qml
-    qml/Menu.qml
+    qmlets/DrawerItem.qml
+    qmlets/FieldString.qml
+    qmlets/FieldTitle.qml
+
+    delegates/HeaderDelegate.qml
+
+    delegates/CellBackground.qml
+    delegates/CellBaseEditor.qml
+    delegates/CellBase.js
+    delegates/CellBase.qml
+    delegates/CellBool.qml
+    delegates/CellColorEditor.qml
+    delegates/CellColor.qml
+    delegates/CellDelegate.qml
+    delegates/CellList.qml
+    delegates/CellNumberEditor.qml
+    delegates/CellNumber.qml
+    delegates/CellTextEditor.qml
+    delegates/CellText.qml
+
+
+    scripts/init.js
 
     main.qml
 )

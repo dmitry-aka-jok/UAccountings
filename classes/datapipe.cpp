@@ -26,14 +26,32 @@ QVariant Datapipe::settings(const QString &name, const QVariant &deflt)
     return m_settings->value(name, deflt);
 }
 
-QVariant Datapipe::variable(const QString &name)
+QVariant Datapipe::variable(const QString &name, QVariant deflt)
 {
-    return m_variables.value(name);
+    if(m_variables.value(name).isValid())
+        return m_variables.value(name);
+    else
+        return deflt;
 }
 
 void Datapipe::setVariable(const QString &name, QVariant var)
 {
     m_variables[name] = var;
+}
+
+QStringList Datapipe::tables()
+{
+    return m_tables.keys();
+}
+
+QVariantMap Datapipe::table(const QString &name)
+{
+    return m_tables.value(name).toMap();
+}
+
+void Datapipe::addTable(const QString &name, QVariantMap fields)
+{
+    m_tables[name] = fields;
 }
 
 QString Datapipe::inetAdresses()

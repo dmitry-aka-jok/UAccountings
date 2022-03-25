@@ -5,6 +5,7 @@
 #include <QVariant>
 
 #include "datapipe.h"
+#include "qmlsqlmodel.h"
 
 class QmlSqlTable : public QObject
 {
@@ -23,7 +24,13 @@ public:
 
     bool validate();
 
-    void get(QVariantMap query);
+    Q_INVOKABLE QmlSqlModel* select(QVariantMap query);
+
+    Q_INVOKABLE bool insert(QVariantMap fields, QVariantList returns);
+    Q_INVOKABLE bool update(QVariantMap fields, QVariantMap conditions);
+    Q_INVOKABLE bool insert_or_update(QVariantMap fields, QVariantMap conditions);
+    Q_INVOKABLE bool remove(QVariantMap fields);
+
 
     QString lastError();
 

@@ -1,16 +1,10 @@
 <RCC>
     <qresource prefix="/">
-        <file>icons/ic_add_48px_menu.svg</file>
-        <file>icons/ic_add_48px.svg</file>
-        <file>icons/ic_add_to_queue_48px.svg</file>
-        <file>icons/ic_exit_to_app_48px.svg</file>
-        <file>icons/ic_menu_48px.svg</file>
-        <file>icons/ic_playlist_add_48px.svg</file>
-        <file>icons/ic_remove_48px_menu.svg</file>
-        <file>icons/ic_remove_48px.svg</file>
-        <file>icons/ic_search_48px.svg</file>
-        <file>icons/ic_shopping_cart_48px.svg</file>
         <file>icons/logo.png</file>
         <file>defaults/settings.ini</file>
+        <file>defaults/variables.txt</file>
+        <file>icons/fi-bs-arrow-down.svg</file>
+        <file>icons/fi-bs-arrow-up.svg</file>
+        <file>icons/fi-bs-arrows-h-copy.svg</file>
     </qresource>
 </RCC>
