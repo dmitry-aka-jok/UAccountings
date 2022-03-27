@@ -22,6 +22,9 @@ Page {
     property var fieldsWidths : [];
     property var fieldsTypes : [];
 
+    property int sortField : -1;
+    property int sortFieldOrder : 0;
+
 
     Component.onCompleted: {
         fieldsNames = ["Код", "Назва", "Група"];
@@ -74,7 +77,6 @@ Page {
                 anchors.verticalCenter: parent.verticalCenter
 
                 MouseArea {
-                    id: mouseHandle
                     anchors.fill: parent
                     drag{ target: parent; axis: Drag.XAxis }
                     hoverEnabled: true
@@ -92,6 +94,38 @@ Page {
                         //                        datapipe.setVariable("debugQueries", true)
                         saveWidths();
                         //                        datapipe.setVariable("debugQueries", false)
+                    }
+                }
+            }
+
+                Image {
+                    id: sortHandle
+
+                    source: (sortField!==column||sortFieldOrder===0?"qrc:/icons/fi-bs-arrows-h-copy.svg":(sortFieldOrder===1?"qrc:/icons/fi-bs-arrow-down.svg":"qrc:/icons/fi-bs-arrow-up.svg"))
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: resizeHandle.left
+                    anchors.rightMargin: 1
+                    anchors.topMargin: 1
+                    anchors.bottomMargin: 1
+
+                    width: 15
+                    height: parent.height
+                    fillMode: Image.PreserveAspectFit
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if(sortField===column){
+                          if (sortFieldOrder===2)
+                             sortFieldOrder = 0
+                          else
+                             sortFieldOrder += 1
+                        }
+                        else {
+                            sortField = column
+                            sortFieldOrder = 1;
+                        }
                     }
                 }
             }
@@ -118,18 +152,40 @@ Page {
 
         model: sqlModel
 
-        //        selectionModel: ItemSelectionModel {
-        //            model: sqlModel
-        //        }
+//        selectionModel: ItemSelectionModel {
+//           id: selecton
+//        }
 
         delegate:
-            ItemDelegate {
-            implicitHeight: theme.basicElementSize
-            text: model["Field."+column]
-            highlighted: row === table.currentRow
-            onClicked: {
-                table.currentRow = row
+            DelegateChooser {
+            role:"Type"
+
+            DelegateChoice {
+                roleValue: "QString"
+
+                ItemDelegate {
+                    implicitHeight: theme.basicElementSize
+                    text: model["Display"]
+                    highlighted: row === table.currentRow
+                    onClicked: {
+                        table.currentRow = row
+                    }
+                }
             }
+            DelegateChoice {
+                roleValue: "int"
+
+                ItemDelegate {
+                    implicitHeight: theme.basicElementSize
+                    text: model["Display"] //+ " (int)"
+                    highlighted: row === table.currentRow
+                    onClicked: {
+                        table.currentRow = row
+                    }
+                }
+            }
+
+
         }
 
         ScrollIndicator.vertical: ScrollIndicator { }

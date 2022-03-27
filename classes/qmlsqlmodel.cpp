@@ -74,26 +74,33 @@ void QmlSqlModel::clearModel()
 QHash<int, QByteArray>QmlSqlModel::roleNames() const
 {
     QHash<int,QByteArray> hash;
+
+    hash.insert(Qt::UserRole+1, "Display"); // QByteArray(record().fieldName(i).toLatin1())
+    hash.insert(Qt::UserRole+2, "Type"); // QByteArray(record().fieldName(i).toLatin1())
+    /*
     for( int i = 0; i < record().count(); i++)
     {
         hash.insert(Qt::UserRole + i + 1, "Field."_qba+QByteArray::number(i)); // QByteArray(record().fieldName(i).toLatin1())
     }
+    */
     return hash;
 }
 
 
 QVariant QmlSqlModel::data(const QModelIndex &index, int role)const
 {
-    QVariant value = QSqlQueryModel::data(index, role);
+    QVariant value; // = QSqlQueryModel::data(index, role);
+
     if(role < Qt::UserRole)
     {
         value = QSqlQueryModel::data(index, role);
     }
     else
     {
-        int columnIdx = role - Qt::UserRole - 1;
-        QModelIndex modelIndex = this->index(index.row(), columnIdx);
-        value = QSqlQueryModel::data(modelIndex, Qt::DisplayRole);
+        if (role==Qt::UserRole+1)
+            value = QSqlQueryModel::data(index, Qt::DisplayRole);
+        if (role==Qt::UserRole+2)
+            value = m_typeList.value(index.column());
     }
     return value;
 }

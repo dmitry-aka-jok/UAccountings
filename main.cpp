@@ -19,7 +19,6 @@
 #include "classes/qmlsql.h"
 #include "classes/qmlsqltable.h"
 #include "classes/qmlsqlmodel.h"
-#include "classes/qmlcellproperty.h"
 
 
 int main(int argc, char *argv[])
@@ -162,9 +161,6 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
     qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");
-
-
-    qmlRegisterType<QmlCellProperty>("UA.Cell",1,0, "Property");
 
 
 //    qmlRegisterUncreatableMetaObject(MetaTypeNamespace::staticMetaObject, "UA.Types", 0, 1, "MetaType", "Access to enums & flags only");

@@ -20,8 +20,6 @@ qt_add_executable(appUAccounting
     classes/qmlsqltable.cpp
     classes/qmlsqlmodel.h
     classes/qmlsqlmodel.cpp
-    classes/qmlcellproperty.h
-    classes/qmlcellproperty.cpp
     resources.qrc
     main.cpp
 )
@@ -41,21 +39,6 @@ qt_add_qml_module(appUAccounting
     qmlets/FieldTitle.qml
 
     delegates/HeaderDelegate.qml
-
-    delegates/CellBackground.qml
-    delegates/CellBaseEditor.qml
-    delegates/CellBase.js
-    delegates/CellBase.qml
-    delegates/CellBool.qml
-    delegates/CellColorEditor.qml
-    delegates/CellColor.qml
-    delegates/CellDelegate.qml
-    delegates/CellList.qml
-    delegates/CellNumberEditor.qml
-    delegates/CellNumber.qml
-    delegates/CellTextEditor.qml
-    delegates/CellText.qml
-
 
     scripts/init.js
 

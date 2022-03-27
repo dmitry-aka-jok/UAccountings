@@ -6,5 +6,7 @@
         <file>icons/fi-bs-arrow-down.svg</file>
         <file>icons/fi-bs-arrow-up.svg</file>
         <file>icons/fi-bs-arrows-h-copy.svg</file>
+        <file>icons/fi-bs-menu-burger.svg</file>
+        <file>icons/fi-bs-sign-out-alt.svg</file>
     </qresource>
 </RCC>

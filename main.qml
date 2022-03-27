@@ -71,14 +71,14 @@ ApplicationWindow {
         ListElement {pageTitle: "Доходы";   pageFunc: function() { stackView.clear();  stackView.push("modules/Template.qml"); }}
         ListElement {separator: true}
         ListElement {pageTitle: "Управление";  pageFunc: function() { mainPageTitle.text = "Настройки"; stackView.clear();  stackView.push("modules/Template.qml"); }}
-        ListElement {pageTitle: "Выход"; pageIcon: "qrc:/icons/ic_exit_to_app_48px.svg"; pageFunc: function() { Qt.quit() }}
+        ListElement {pageTitle: "Выход"; pageIcon: "qrc:/icons/fi-bs-sign-out-alt.svg"; pageFunc: function() { Qt.quit() }}
     }
 
     header: ToolBar {
         contentHeight: toolButton.implicitHeight
         ToolButton {
             id: toolButton
-            icon.source: "qrc:/icons/ic_menu_48px.svg"
+            icon.source: "qrc:/icons/fi-bs-menu-burger.svg"
             onClicked:
                 drawer.open()
         }
