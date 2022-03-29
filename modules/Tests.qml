@@ -117,15 +117,25 @@ Page {
                     anchors.fill: parent
                     onClicked: {
                         if(sortField===column){
-                          if (sortFieldOrder===2)
+                          if (sortFieldOrder===2){
                              sortFieldOrder = 0
-                          else
+                          }else{
                              sortFieldOrder += 1
+
+                          }
                         }
                         else {
                             sortField = column
                             sortFieldOrder = 1;
                         }
+
+                        if (sortFieldOrder==0)
+                            sqlModel.setSort(-1, Qt.AscendingOrder)
+                        if (sortFieldOrder==1)
+                            sqlModel.setSort(sortField, Qt.AscendingOrder)
+                        if (sortFieldOrder==2)
+                            sqlModel.setSort(sortField, Qt.DescendingOrder)
+
                     }
                 }
             }
@@ -166,6 +176,7 @@ Page {
                 ItemDelegate {
                     implicitHeight: theme.basicElementSize
                     text: model["Display"]
+                    //color: index % 2 == 0 ? "white" : "#C0C0C0"
                     highlighted: row === table.currentRow
                     onClicked: {
                         table.currentRow = row
@@ -178,6 +189,7 @@ Page {
                 ItemDelegate {
                     implicitHeight: theme.basicElementSize
                     text: model["Display"] //+ " (int)"
+                    //color: index % 2 == 0 ? "white" : "#C0C0C0"
                     highlighted: row === table.currentRow
                     onClicked: {
                         table.currentRow = row
@@ -199,12 +211,28 @@ Page {
                 event.accepted = true;
             }
             if (event.key === Qt.Key_Down) {
-                //console.log(sqlModel.rowCount())
                 if(table.currentRow < sqlModel.rowCount()-1)
                 table.currentRow++;
                 event.accepted = true;
             }
         }
+
+    TextField {
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        id: searchField
+        height: 40
+        width: parent.width
+        focus: true
+        placeholderText: "Enter search text"
+        onTextChanged: {
+            sqlModel.setFilterString(searchField.text)
+        }
+        Component.onCompleted: {
+            sqlModel.setFilterColumn(1)
+        }
+
+    }
 }
 
 

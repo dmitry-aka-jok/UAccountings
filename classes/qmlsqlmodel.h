@@ -2,6 +2,7 @@
 #define QMLSQLMODEL_H
 
 #include <QSqlQueryModel>
+#include <QSortFilterProxyModel>
 #include <QSqlDatabase>
 #include <QSqlRecord>
 #include <QSqlField>
@@ -13,28 +14,25 @@
 
 #include "datapipe.h"
 
-class QmlSqlModel : public QSqlQueryModel
+class QmlDataModel : public QSortFilterProxyModel
 {
     Q_OBJECT
-    Q_PROPERTY(QString queryString READ queryString WRITE setQueryString NOTIFY queryStringChanged)
     Q_PROPERTY(QStringList rolesList READ rolesList  NOTIFY rolesListChanged)
-//    Q_PROPERTY(QStringList typesList READ typesList  NOTIFY rolesListChanged)
-    Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
+    Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
+    Q_PROPERTY(int filterColumn READ filterColumn WRITE setFilterColumn NOTIFY filterColumnChanged)
 
 public:
+    explicit QmlDataModel(Datapipe *datapipe, QObject *parent = nullptr);
 
-    explicit QmlSqlModel(Datapipe *datapipe, QObject *parent = nullptr);
-
-    QString queryString()const;
     void setQueryString(const QString &queryString);
 
-    QStringList rolesList() const;
+    Q_INVOKABLE QStringList rolesList() const;
     Q_INVOKABLE QStringList typesList() const;
 
     QString errorString ()const;
 
-    Q_INVOKABLE void exec();
-    Q_INVOKABLE void clearModel();
+    bool exec();
+
 
     QVariant data(const QModelIndex &index, int role)const;
 
@@ -43,19 +41,33 @@ public:
 
     QHash<int, QByteArray>roleNames() const;
 
+    Q_INVOKABLE QString filterString() const;
+    Q_INVOKABLE void setFilterString(const QString &filterString);
 
+    Q_INVOKABLE int filterColumn();
+    Q_INVOKABLE void setFilterColumn(int filterColumn);
+
+    Q_INVOKABLE void setSort(int row,  Qt::SortOrder order);
 signals:
-    void completed();
+    void filterStringChanged(QString filterString);
+    void filterColumnChanged(int filterColumn);
 
-    void queryStringChanged();
     void rolesListChanged();
     void errorStringChanged();
 
+protected:
+    bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const;   // custom sort logic
+    bool filterAcceptsRow(int sourceRow,const QModelIndex &sourceParent) const;             // custom filter logic
+
 private:
-        QString m_queryString;
-        QStringList m_roleList;
-        QStringList m_typeList;
-        QString m_errorString;
-        Datapipe *datapipe;
+    QString m_queryString;
+    QStringList m_roleList;
+    QStringList m_typeList;
+    QString m_errorString;
+    QString m_filterString;
+    int m_filterColumn;
+
+    Datapipe *datapipe;
+    QSqlQueryModel sqlmodel;
 };
 #endif // QMLSQLMODEL_H

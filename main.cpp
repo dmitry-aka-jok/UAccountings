@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("UA.SQL",1,0, "SQL", &qmlsql);
 
     qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
-    qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");
+    qmlRegisterType<QmlDataModel>("UA.SQL",1,0, "SQLModel");
 
 
 //    qmlRegisterUncreatableMetaObject(MetaTypeNamespace::staticMetaObject, "UA.Types", 0, 1, "MetaType", "Access to enums & flags only");

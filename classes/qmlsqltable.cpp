@@ -69,7 +69,7 @@ bool QmlSqlTable::validate()
 
 
 
-QmlSqlModel* QmlSqlTable::select(QVariantMap query)
+QmlDataModel* QmlSqlTable::select(QVariantMap query)
 {
     QString queryPrefixs, queryFields, queryJoins, queryWheres, queryLimits, queryOrders, queryHavings;
 
@@ -272,10 +272,13 @@ QmlSqlModel* QmlSqlTable::select(QVariantMap query)
     if(datapipe->variable("debugQueries", false).toBool())
         qDebug()<<queryString;
 
-    QmlSqlModel* model = new QmlSqlModel(datapipe);
+    QmlDataModel* model = new QmlDataModel(datapipe);
 
     model->setQueryString(queryString);
     model->exec();
+
+   // model->setSortRole(Qt::UserRole+1);
+   // model->sort(0, Qt::DescendingOrder);
 
     return model;
 }

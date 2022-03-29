@@ -24,7 +24,7 @@ public:
 
     bool validate();
 
-    Q_INVOKABLE QmlSqlModel* select(QVariantMap query);
+    Q_INVOKABLE QmlDataModel* select(QVariantMap query);
 
     Q_INVOKABLE bool insert(QVariantMap fields, QVariantList returns);
     Q_INVOKABLE bool update(QVariantMap fields, QVariantMap conditions);
