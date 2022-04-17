@@ -1,38 +1,37 @@
 .pragma library
-.import UA.SQL as SQL
+.import UA.SQL as SQLModule
 
 
 function initUA(){
   initDatabase()
-  console.log("Store database")
 }
 
 
 function initDatabase(){
-    SQL.SQL.defineTable("users", {
-                    id:{type:"PK"},
-                    name:{type:"String",name:"Назва"},
+    SQLModule.SQLCore.defineTable("users", {
+                    id:{type:SQLModule.SQLCore.PK},
+                    name:{type:SQLModule.SQLCore.String,name:"Назва"},
                 });
-    SQL.SQL.defineTable("settings", {
-                    id:{type:"PK"},
-                    user_id:{type:"FK",name:"Користувач",accept_null:false,reference:"users.id"},
-                    section:{type:"String",name:"Розділ"},
-                    option:{type:"String",name:"Параметр"},
-                    value:{type:"String",name:"Значення"}
-                });
-
-
-
-
-    SQL.SQL.defineTable("goods", {
-                    id:{type:"PK"},
-                    name:{type:"String",name:"Назва"},
-                    goodsgroup_id:{type:"FK",name:"Група",accept_null:false,reference:"goodsgroups.id"}
+    SQLModule.SQLCore.defineTable("settings", {
+//                    id:{type:SQLModule.SQLCore.PK},
+                    user_id:{type:SQLModule.SQLCore.FK,name:"Користувач",accept_null:false,reference:"users.id"},
+                    section:{type:SQLModule.SQLCore.String,name:"Розділ"},
+                    option:{type:SQLModule.SQLCore.String,name:"Параметр"},
+                    value:{type:SQLModule.SQLCore.String,name:"Значення"}
                 });
 
-    SQL.SQL.defineTable("goodsgroups", {
-                    id:{type:"PK"},
-                    name:{type:"String",name:"Назва"}
+
+
+
+    SQLModule.SQLCore.defineTable("goods", {
+                    id:{type:SQLModule.SQLCore.PK,name:"Код"},
+                    name:{type:SQLModule.SQLCore.String,name:"Назва"},
+                    goodsgroup_id:{type:SQLModule.SQLCore.FK,name:"Група",accept_null:false,reference:"goodsgroups.id"}
+                });
+
+    SQLModule.SQLCore.defineTable("goodsgroups", {
+                    id:{type:SQLModule.SQLCore.PK,name:"Код"},
+                    name:{type:SQLModule.SQLCore.String,name:"Назва"}
                 });
 }
 

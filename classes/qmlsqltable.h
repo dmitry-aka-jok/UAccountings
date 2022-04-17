@@ -16,8 +16,8 @@ public:
     explicit QmlSqlTable(QObject *parent = nullptr);
 
 
-    void setTable(QString table);
-    void setFields(QVariantMap fields);
+    void setTable(const QString &table);
+    void setFields(const QVariantMap &fields);
 
     QString table();
     QVariantMap fields();

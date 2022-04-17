@@ -17,5 +17,7 @@
         <file>store/modules/Table.qml</file>
         <file>store/modules/Template.qml</file>
         <file>store/main.qml</file>
+        <file>store/qml/Contractors.qml</file>
+        <file>store/templates/TableEditor.qml</file>
     </qresource>
 </RCC>

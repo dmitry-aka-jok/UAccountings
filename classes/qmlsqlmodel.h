@@ -30,14 +30,17 @@ public:
 
     QString errorString ()const;
 
-    bool exec(const QString &queryString);
+    //bool exec(const QString &queryString);
+    bool exec(const QString &table, const QVariantMap &fields, const QVariantMap &query);
 
-    QVariant data(const QModelIndex &index, int role)const;
+    QVariant data(const QModelIndex &index, int role) const override;
+
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
     Q_INVOKABLE QVariant value(int row, int column, QVariant deflt = QVariant()) const;
     Q_INVOKABLE QVariant value(int row, QString column, QVariant deflt = QVariant()) const;
 
-    QHash<int, QByteArray>roleNames() const;
+    QHash<int, QByteArray>roleNames() const override;
 
     Q_INVOKABLE QString filterString() const;
     Q_INVOKABLE void setFilterString(const QString &filterString);
@@ -55,10 +58,14 @@ signals:
     void errorOccurred();
 
 protected:
-    bool filterAcceptsRow(int sourceRow,const QModelIndex &sourceParent) const;
+    bool filterAcceptsRow(int sourceRow,const QModelIndex &sourceParent) const override;
 
 private:
-    QString m_queryString;
+    QString m_table;
+    QVariantMap m_query;
+    QVariantMap m_fields;
+    QVariantMap m_fieldsPK;
+
     QStringList m_roleList;
     QStringList m_typeList;
     QString m_errorString;

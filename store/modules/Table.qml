@@ -3,38 +3,56 @@ import QtQml.Models
 
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Material
 import QtQuick.Layouts
 
 import Qt.labs.qmlmodels
 
 import UA.SQL
-
+import UA.Datapipe
 
 import "../delegates"
 
-Page {
-  id: pageRoot
-  title: "Товари"
+
+Item {
+  id: tableRoot
   property var sqlModel;
 
-  property string tableName: "goods"
-  property var fields : [
-    {field:"id", name:"Код", visible:false, primary:true},
-    {field:"name", name:"Назва"},
-    {field:"goodsgroups_id", name:"Група", foreign_table:"goodsgroups", foreign_key:"id", foreign_name:"name"}
-  ];
+  required property string tableName;
+  required property var fields;
 
   property var fieldsWidths : [];
   property var fieldsTypes : [];
+
+  property int minimalFieldWidth: 50
+  property int headerHeight: 30
   property int sortField;
   property int sortOrder;
   property int filterField;
 
+  property var beforeEdit: [];
+  property string editStatement;
+  property var selFields : [];
+  property var selJoins  : [];
+
+
+/*
+  function UATable(tableName, fields)
+
+
+
+  tableName: "goods"
+  fields : [
+    {field:"name", name:"Назва", onChange: "function(item){}" },
+    {field:"goodsgroups_id", name:"Група", foreign_table:"goodsgroups", foreign_key:"id", foreign_name:"name"}
+  ];
+  actions : {onCreate: onSave: }
+
+  onFieldNameChanged
+
+*/
+
 
   Component.onCompleted: {
-    let selFields = [];
-    let selJoins  = [];
 
     for(var i=0; i<fields.length; i++){
       if(typeof fields[i]["foreign_table"] === 'undefined')
@@ -45,11 +63,11 @@ Page {
       }
     }
 
-    sqlModel = SQL.table(tableName).select({fields:selFields, joins:selJoins});
+    sqlModel = SQLCore.table(tableName).select({fields:selFields, joins:selJoins});
 
     let types = sqlModel.typesList();
 
-    let sqlSettings = SQL.table("settings").select({fields:"value", where:{"section":tableName, "option":"columnsWidth", "user_id":datapipe.variable("user_id",-1)}});
+    let sqlSettings = SQLCore.table("settings").select({fields:"value", where:{"section":tableName, "option":"columnsWidth", "user_id":Datapipe.variable("user_id",-1)}});
     let vvv = sqlSettings.value(0,0,"").split(",");
 
     for (let i = 0; i < fields.length; i++) {
@@ -57,41 +75,49 @@ Page {
         fieldsWidths[i] = 0;
       else
         if(typeof vvv[i] !== 'undefined')
-          fieldsWidths[i] = vvv[i];
+          fieldsWidths[i] = Math.max(vvv[i], minimalFieldWidth) ;
         else
-          fieldsWidths[i] = theme.tableMinimalWidth;
+          fieldsWidths[i] = minimalFieldWidth;
 
       fieldsTypes[i] = types[i];
     }
-    sqlSettings = SQL.table("settings").select(
-          {fields:"value", where:{"section":tableName, "option":"filterField", "user_id":datapipe.variable("user_id",-1)}});
+    sqlSettings = SQLCore.table("settings").select(
+          {fields:"value", where:{"section":tableName, "option":"filterField", "user_id":Datapipe.variable("user_id",-1)}});
     filterField = sqlSettings.value(0,0,-1);
 
     sqlModel.setFilterColumn(filterField);
 
-    sqlSettings = SQL.table("settings").select(
-          {fields:"value", where:{"section":tableName, "option":"sortField", "user_id":datapipe.variable("user_id",-1)}});
+    sqlSettings = SQLCore.table("settings").select(
+          {fields:"value", where:{"section":tableName, "option":"sortField", "user_id":Datapipe.variable("user_id",-1)}});
     sortField = sqlSettings.value(0,0,-1);
 
-    sqlSettings = SQL.table("settings").select(
-          {fields:"value", where:{"section":tableName, "option":"sortOrder", "user_id":datapipe.variable("user_id",-1)}});
+    sqlSettings = SQLCore.table("settings").select(
+          {fields:"value", where:{"section":tableName, "option":"sortOrder", "user_id":Datapipe.variable("user_id",-1)}});
     sortOrder = sqlSettings.value(0,0,0);
 
     setSort();
 
 
     let inputFormFields = "";
+    let fillFormFields = "";
+    let saveFormFields = "";
     for (i = 0; i < fields.length; i++) {
       inputFormFields += `
-      Text{
+      Label{
+        id: name_${fields[i]["field"]}
         text:"${fields[i]["name"]}"
-        font: theme.textFont
       }
       TextField{
-        placeholderText:"field"
-        font:theme.textFont
+        id: field_${fields[i]["field"]}
         Layout.fillWidth : true
       }`;
+
+      fillFormFields += `
+           field_${fields[i]["field"]}.text = editorModel.value(0,${i},-1);`
+      saveFormFields += `
+           if (field_${fields[i]["field"]}.text !== beforeEdit[${i}])
+              saveFields.set("${fields[i]["field"]}", field_${fields[i]["field"]}.text)
+      `;
     }
 
     let text = `
@@ -99,30 +125,48 @@ Page {
     import QtQuick.Layouts
     import QtQuick.Controls
 
-    GridLayout{
-    columns: 2
-    ${inputFormFields}
-    }
-    Row {
-    spacing: theme.margins;
-    Button {
-    text: "Відміна"
-    implicitHeight: theme.basicButtonHeight
-    implicitWidth: theme.basicButtonWidth
-    onClicked: {
-    pageRoot.state = ""
-    }
-    }
-    Button {
-    text: "Ok"
-    implicitHeight: theme.basicButtonHeight
-    implicitWidth: theme.basicButtonWidth
-    onClicked: {
-    pageRoot.state = ""
-    }
-    }
-    }`
+    import UA.SQL
+    import UA.Datapipe
 
+    GridLayout{
+      id: editorGrid
+      width: parent.width
+      columns: 2
+      ${inputFormFields}
+
+      Button {
+        id: btCancel
+        text: "Відміна"
+        onClicked: {
+          tableRoot.state = ""
+        }
+      }
+      Button {
+        id: btOk
+        text: "Ok"
+        onClicked: {
+          let saveFields = new Map()
+          ${saveFormFields}
+          console.log(saveFields)
+          if(saveFields.size > 0)
+            console.log("yep")
+
+          tableRoot.state = ""
+        }
+      }
+
+      onVisibleChanged: {
+        if(editorGrid.visible===true){
+           let editorModel = SQLCore.table(tableName).select({fields:selFields, joins:selJoins, where:tableRoot.editStatement});
+           beforeEdit = [];
+           for(let i=0; i<fields.length; i++)
+              beforeEdit[i] = editorModel.value(0,i,-1);
+           ${fillFormFields}
+        }
+      }
+
+    }
+    `
     console.log(text)
     Qt.createQmlObject(text, editor)
 
@@ -134,18 +178,19 @@ Page {
       sss += (column==0?"":",")+fieldsWidths[column];
     }
 
-    SQL.table("settings").insert_or_update(
-          {"value":sss}, {"section":tableName, "option":"columnsWidth", "user_id":datapipe.variable("user_id",-1)})
+    //console.log(sss)
+    SQLCore.table("settings").insert_or_update(
+          {"value":sss}, {"section":tableName, "option":"columnsWidth", "user_id":Datapipe.variable("user_id",-1)})
   }
   function saveFilter() {
-    SQL.table("settings").insert_or_update(
-          {"value":filterField}, {"section":tableName, "option":"filterField", "user_id":datapipe.variable("user_id",-1)})
+    SQLCore.table("settings").insert_or_update(
+          {"value":filterField}, {"section":tableName, "option":"filterField", "user_id":Datapipe.variable("user_id",-1)})
   }
   function saveSort() {
-    SQL.table("settings").insert_or_update(
-          {"value":sortField}, {"section":tableName, "option":"sortField", "user_id":datapipe.variable("user_id",-1)})
-    SQL.table("settings").insert_or_update(
-          {"value":sortOrder}, {"section":tableName, "option":"sortOrder", "user_id":datapipe.variable("user_id",-1)})
+    SQLCore.table("settings").insert_or_update(
+          {"value":sortField}, {"section":tableName, "option":"sortField", "user_id":Datapipe.variable("user_id",-1)})
+    SQLCore.table("settings").insert_or_update(
+          {"value":sortOrder}, {"section":tableName, "option":"sortOrder", "user_id":Datapipe.variable("user_id",-1)})
   }
 
   function setSort(){
@@ -157,44 +202,19 @@ Page {
       sqlModel.setSort(sortField, Qt.DescendingOrder)
   }
 
- /*
-  GridLayout{
-  columns: 2
-  ${inputFormFields}
-  }
-  Row {
-  spacing: theme.margins;
-  Button {
-  text: "Відміна"
-  implicitHeight: theme.basicButtonHeight
-  implicitWidth: theme.basicButtonWidth
-  onClicked: {
-  pageRoot.state = ""
-  }
-  }
-  Button {
-  text: "Ok"
-  implicitHeight: theme.basicButtonHeight
-  implicitWidth: theme.basicButtonWidth
-  onClicked: {
-  pageRoot.state = ""
-  }
-  }
-  }`
- */
 
 
   HorizontalHeaderView {
     id: tableHeader
     syncView: table
     anchors.left: table.left
-    visible: pageRoot.state===""
+    visible: tableRoot.state===""
 
     delegate:
         HeaderDelegate {
       id: headerDelegate
       text: fields[column]["name"]
-      implicitHeight: theme.basicElementSize
+      implicitHeight: headerHeight
 
       Rectangle {
         id: resizeHandle
@@ -211,8 +231,9 @@ Page {
           cursorShape: Qt.SizeHorCursor
           onMouseXChanged: {
             if (drag.active) {
-              var newWidth = header.width + mouseX
-              if (newWidth >= theme.tableMinimalWidth) {
+              //console.log(mouseX, headerDelegate.width)
+              var newWidth = headerDelegate.width + mouseX
+              if (newWidth >= minimalFieldWidth) {
                 fieldsWidths[column] = newWidth
                 table.forceLayout()
               }
@@ -272,7 +293,7 @@ Page {
     z:0
     reuseItems: true
     clip: true
-    visible: pageRoot.state===""
+    visible: tableRoot.state===""
     property int currentRow: 0
 
 
@@ -293,57 +314,36 @@ Page {
       role:"Type"
 
       DelegateChoice {
-        roleValue: "QString"
+//        roleValue: "QString"
 
         ItemDelegate {
           id: delegate
-          implicitHeight: theme.basicElementSize
+          //          implicitHeight: theme.basicElementSize
           text: model["Display"]
-          highlighted: row === table.currentRow
-          font: theme.tableFont
-
+          highlighted: row % 2 == 0 //row === table.currentRow
+/*
           background: Rectangle {
             color: delegate.highlighted ? theme.highlightColor : row % 2 == 0 ? theme.backgroundColor : theme.interleaveColor
           }
-
+*/
           onClicked: {
             table.currentRow = row
           }
           onDoubleClicked: {
+            tableRoot.editStatement = model["Index"]
             table.currentRow = row
-            pageRoot.state = "editor"
-          }
-        }
-      }
-      DelegateChoice {
-        roleValue: "int"
-
-        ItemDelegate {
-          implicitHeight: theme.basicElementSize
-          text: model["Display"]
-          highlighted: row === table.currentRow
-          font: theme.tableFont
-
-          background: Rectangle {
-            color: delegate.highlighted ? theme.highlightColor : row % 2 == 0 ? theme.backgroundColor : theme.interleaveColor
-          }
-
-          onClicked: {
-            table.currentRow = row
-          }
-          onDoubleClicked: {
-            table.currentRow = row
-            pageRoot.state = "editor"
+            tableRoot.state = "editor"
           }
         }
       }
     }
-    ScrollIndicator.vertical: ScrollIndicator { }
+    ScrollIndicator.vertical: ScrollIndicator {}
+    ScrollIndicator.horizontal: ScrollIndicator {}
   }
 
   Keys.onPressed:
       (event)=> {
-        if(pageRoot.state===""){
+        if(tableRoot.state===""){
           if (event.key === Qt.Key_Up) {
             if(table.currentRow > 0)
             table.currentRow--;
@@ -361,12 +361,11 @@ Page {
     id: searchRow
     anchors.left: parent.left
     anchors.bottom: parent.bottom
-    width: pageRoot.width
-    visible: pageRoot.state===""
+    width: tableRoot.width
+    visible: tableRoot.state===""
 
-    Text {
+    Label {
       id: searchName
-      font: theme.tableFont
       anchors.verticalCenter: parent.verticalCenter
       text: (filterField===-1)?"Всі стовпчики: ":(fields[filterField]["name"]+": ")
 
@@ -395,10 +394,8 @@ Page {
 
     TextField {
       id: searchField
-      font: theme.tableFont
       width: parent.width - searchName.width
 
-      implicitHeight: theme.basicElementSize * 1.2
       focus: true
       placeholderText: "строка пошуку"
       onTextChanged: {
@@ -409,8 +406,9 @@ Page {
 
   Column {
     id : editor
-    visible : pageRoot.state==="editor"
+    visible : tableRoot.state==="editor"
     anchors.fill: parent
+
   }
 
 

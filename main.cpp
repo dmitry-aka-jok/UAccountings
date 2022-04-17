@@ -201,7 +201,9 @@ int main(int argc, char *argv[])
 
 
     QmlSql sql;
-    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQL", &sql);
+    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQLCore", &sql);
+    qRegisterMetaType<QmlSql::FieldType>("SQLCore::FieldType");
+
 
     qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
     qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");

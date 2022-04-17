@@ -11,13 +11,13 @@ QmlSqlTable::QmlSqlTable(QObject *parent)
     datapipe = Datapipe::instance();
 }
 
-void QmlSqlTable::setTable(QString table)
+void QmlSqlTable::setTable(const QString &table)
 {
     m_table = table;
     emit tableChanged();
 }
 
-void QmlSqlTable::setFields(QVariantMap fields)
+void QmlSqlTable::setFields(const QVariantMap &fields)
 {
     m_fields = fields;
     emit fieldsChanged();
@@ -72,210 +72,9 @@ bool QmlSqlTable::validate()
 
 QmlSqlModel* QmlSqlTable::select(QVariantMap query)
 {
-    QString queryPrefixs, queryFields, queryJoins, queryWheres, queryLimits, queryOrders, queryHavings;
-
-    QString alias;
-    if (query.contains(u"alias"_qs))
-        alias = query.value(u"fields"_qs).toString();
-    else
-        alias = m_table;
-
-
-    bool isFirst;
-
-    QVariantList fields;
-    if (query.contains(u"fields"_qs)){
-        // Array or only one field
-        if (query.value(u"fields"_qs).typeName() == u"QVariantList"_qs){
-            fields = query.value(u"fields"_qs).toList();
-        }else{
-            fields <<query.value(u"fields"_qs);
-        }
-    }else{
-        // append all fields
-        foreach(auto var, m_fields.keys()){
-            fields.append(var);
-        }
-    }
-    isFirst=true;
-    foreach(auto var, fields){
-        QString svar = var.toString();
-        if (!svar.contains(u"."_qs))
-            svar = alias+u"."_qs+svar;
-        if(isFirst)
-            isFirst = false;
-        else
-            svar = u", %1"_qs.arg(svar);
-
-        queryFields +=  svar;
-    }
-
-
-    QVariantList joins;
-    if (query.contains(u"joins"_qs)){
-        if (query.value(u"joins"_qs).typeName() == u"QVariantList"_qs){
-            joins = query.value(u"joins"_qs).toList();
-        }else{
-            joins <<query.value(u"joins"_qs);
-        }
-    }
-    QStringList tables;
-    tables.append(m_table);
-
-    foreach(auto var, joins){
-        QString svar = var.toString();
-        // variants to use
-        //  1. only table name - need to add join, alias, on-condition
-        //  ----- 2. table name + alias - need to add join and on-condition
-        //  3. full join construction
-        if (!svar.contains(u"join"_qs)){
-            QString joinTable = svar;
-            QString joinOn;
-
-            //qDebug()<<datapipe->table(joinTable);
-
-            foreach (auto tbl, tables){
-                QVariantMap tblconf = datapipe->table(tbl);
-                foreach (auto fld, tblconf.keys()){ // fields
-                    QVariantMap fldconf = tblconf.value(fld).toMap();
-                    if (fldconf.contains(u"reference"_qs)){
-                        QString ref = fldconf.value(u"reference"_qs).toString();
-                        if(ref.startsWith(joinTable+u"."_qs)){
-                            joinOn = u" on %1.%2 = %3"_qs.arg(tbl, fld, ref);
-                            break;
-                        }
-                    }
-                }
-                if(!joinOn.isEmpty()) break;
-            }
-
-            if(joinOn.isEmpty()){
-                QVariantMap tblconf = datapipe->table(joinTable);
-                foreach (auto fld, tblconf.keys()){ // fields
-                    QVariantMap fldconf = tblconf.value(fld).toMap();
-                    if (fldconf.contains(u"reference"_qs)){
-                        foreach (auto tbl, tables){
-                            QString ref = fldconf.value(u"reference"_qs).toString();
-                            if (ref.startsWith(tbl+u"."_qs)){
-                                joinOn = u" on %1.%2 = %3"_qs.arg(joinTable, fld, ref);
-                                break;
-                            }
-                        }
-                    }
-                    if(!joinOn.isEmpty()) break;
-                }
-            }
-
-            tables.append(svar);
-
-            svar = u" join %1%2"_qs.arg(svar, joinOn);
-        }
-        queryJoins +=  svar;//u" %1"_qs.arg(svar);
-    }
-
-
-    QVariantList wheres;
-    if (query.contains(u"where"_qs)){
-        if (query.value(u"where"_qs).typeName() == u"QVariantMap"_qs){
-            QVariantMap map = query.value(u"where"_qs).toMap();
-            foreach(auto fld, map.keys()){
-                QString fldToCompare = fld;
-                if (!fldToCompare.contains(u"."_qs))
-                    fldToCompare = u"%1.%2"_qs.arg(alias,fldToCompare);
-
-                wheres<<u"%1=%2"_qs.arg(fldToCompare, QmlSql::formatToSQL(map.value(fld)) );
-            }
-        }else
-        if (query.value(u"where"_qs).typeName() == u"QVariantList"_qs){
-            wheres = query.value(u"where"_qs).toList();
-        }else{
-            wheres <<query.value(u"where"_qs);
-        }
-    }
-    isFirst = true;
-    foreach(auto var, wheres){
-        QString svar = var.toString();
-        QString sand;
-        if(isFirst)
-            isFirst = false;
-        else
-            sand = u" and "_qs;
-
-        queryWheres +=  u"%1(%2)"_qs.arg(sand, svar);
-    }
-    if (!queryWheres.isEmpty())
-        queryWheres = u" WHERE %1"_qs.arg(queryWheres);
-
-
-    if (query.contains(u"limit"_qs))
-        queryLimits  = u" LIMIT %1"_qs.arg(query.value(u"limit"_qs).toString());
-
-
-    QVariantList orders;
-    if (query.contains(u"order"_qs)){
-        if (query.value(u"order"_qs).typeName() == u"QVariantList"_qs){
-            orders = query.value(u"order"_qs).toList();
-        }else{
-            orders <<query.value(u"order"_qs);
-        }
-    }
-    isFirst = true;
-    foreach(auto var, orders){
-        QString svar = var.toString();
-        QString sand;
-        if (!svar.contains(u"."_qs))
-            svar = alias+u"."_qs+svar;
-        if(isFirst)
-            isFirst = false;
-        else
-            sand = u", "_qs;
-
-        queryOrders +=  u"%1%2"_qs.arg(sand, svar);
-    }
-    if (!queryOrders.isEmpty())
-        queryOrders = u" ORDER BY %1"_qs.arg(queryOrders);
-
-
-    QVariantList havings;
-    if (query.contains(u"having"_qs)){
-        if (query.value(u"having"_qs).typeName() == u"QVariantList"_qs){
-            havings = query.value(u"having"_qs).toList();
-        }else{
-            havings <<query.value(u"having"_qs);
-        }
-    }
-    isFirst = true;
-    foreach(auto var, havings){
-        QString svar = var.toString();
-        QString sand = "";
-        if(isFirst)
-            isFirst = false;
-        else
-            sand = u", "_qs;
-
-        queryHavings +=  u"%1%2"_qs.arg(sand, svar);
-    }
-    if (!queryHavings.isEmpty())
-        queryHavings = u" HAVING %1"_qs.arg(queryHavings);
-
-
-    QString queryString = u"SELECT %1%2 FROM %3%4%5%6%7%8%9"_qs
-            .arg(queryPrefixs,
-                 queryFields,
-                 m_table,
-                 (alias==m_table?u""_qs:m_table),
-                 queryJoins,
-                 queryWheres,
-                 queryLimits,
-                 queryOrders,
-                 queryHavings);
-
-    if(datapipe->variable("debugQueries", false).toBool())
-        qDebug()<<queryString;
-
     QmlSqlModel* model = new QmlSqlModel(datapipe);
 
-    model->exec(queryString);
+    model->exec(m_table, m_fields, query);
 
     return model;
 }

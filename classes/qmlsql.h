@@ -13,6 +13,16 @@ class QmlSql : public QObject
     Q_OBJECT
 
 public:
+    enum FieldType {
+        PK,
+        FK,
+        String,
+        Int,
+        Bool
+    };
+    Q_ENUM(FieldType)
+
+
     explicit QmlSql(QObject *parent = nullptr);
 
     Q_INVOKABLE void defineTable(QString name, QVariantMap fields);
@@ -24,5 +34,7 @@ private:
     Datapipe *datapipe;
 
 };
+
+//Q_DECLARE_METATYPE(QmlSql::FieldType)
 
 #endif // QMLSQL_H
