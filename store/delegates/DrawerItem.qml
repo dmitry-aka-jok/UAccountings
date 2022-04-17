@@ -1,6 +1,6 @@
-import QtQuick 6.0
-import QtQuick.Controls.Material 6.0
-import QtQuick.Layouts 6.0
+import QtQuick
+import QtQuick.Controls.Material
+import QtQuick.Layouts
 
 
 ItemDelegate {

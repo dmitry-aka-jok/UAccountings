@@ -7,7 +7,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.2 COMPONENTS Quick Sql REQUIRED)
+find_package(Qt6 6.3 COMPONENTS Quick Sql REQUIRED)
 
 
 qt_add_executable(appUAccounting
@@ -20,30 +20,32 @@ qt_add_executable(appUAccounting
     classes/qmlsqltable.cpp
     classes/qmlsqlmodel.h
     classes/qmlsqlmodel.cpp
+    classes/qmltreeelement.h
+    classes/qmltreeelement.cpp
+    classes/qmltreemodel.h
+    classes/qmltreemodel.cpp
+
+
     resources.qrc
     main.cpp
 )
 
 
 
+#qt_add_qml_module(appUAccounting
+#    URI UAccounting
+#    VERSION 1.0
+#    QML_FILES
+#
+#    main.qml
+#)
 
-qt_add_qml_module(appUAccounting
-    URI UAccounting
-    VERSION 1.0
-    QML_FILES
-    modules/Template.qml
-    modules/Tests.qml
+#modules/Template.qml
+#modules/Table.qml
+#delegates/DrawerItem.qml
+#delegates/HeaderDelegate.qml
+#init/init.js
 
-    qmlets/DrawerItem.qml
-    qmlets/FieldString.qml
-    qmlets/FieldTitle.qml
-
-    delegates/HeaderDelegate.qml
-
-    scripts/init.js
-
-    main.qml
-)
 
 set_target_properties(appUAccounting PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

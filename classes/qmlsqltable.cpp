@@ -5,10 +5,10 @@
 
 #include "qmlsql.h"
 
-QmlSqlTable::QmlSqlTable(Datapipe *datapipe, QObject *parent)
-    : QObject{parent}, datapipe(datapipe)
+QmlSqlTable::QmlSqlTable(QObject *parent)
+    : QObject{parent}
 {
-
+    datapipe = Datapipe::instance();
 }
 
 void QmlSqlTable::setTable(QString table)
@@ -20,6 +20,7 @@ void QmlSqlTable::setTable(QString table)
 void QmlSqlTable::setFields(QVariantMap fields)
 {
     m_fields = fields;
+    emit fieldsChanged();
 }
 
 QString QmlSqlTable::table()
@@ -69,7 +70,7 @@ bool QmlSqlTable::validate()
 
 
 
-QmlDataModel* QmlSqlTable::select(QVariantMap query)
+QmlSqlModel* QmlSqlTable::select(QVariantMap query)
 {
     QString queryPrefixs, queryFields, queryJoins, queryWheres, queryLimits, queryOrders, queryHavings;
 
@@ -272,13 +273,9 @@ QmlDataModel* QmlSqlTable::select(QVariantMap query)
     if(datapipe->variable("debugQueries", false).toBool())
         qDebug()<<queryString;
 
-    QmlDataModel* model = new QmlDataModel(datapipe);
+    QmlSqlModel* model = new QmlSqlModel(datapipe);
 
-    model->setQueryString(queryString);
-    model->exec();
-
-   // model->setSortRole(Qt::UserRole+1);
-   // model->sort(0, Qt::DescendingOrder);
+    model->exec(queryString);
 
     return model;
 }

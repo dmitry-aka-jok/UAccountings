@@ -3,46 +3,42 @@
 #include <QDateTime>
 
 
-QmlDataModel::QmlDataModel(Datapipe *datapipe, QObject *parent) :
-    QSortFilterProxyModel(parent), datapipe (datapipe)
+QmlSqlModel::QmlSqlModel(QObject *parent) :
+    QSortFilterProxyModel(parent)
 {
+    datapipe = Datapipe::instance();
     setSourceModel(&sqlmodel);
     m_filterColumn = -1;
-    setDynamicSortFilter(true);
 }
 
-
-void QmlDataModel::setQueryString(const QString &queryString)
+QmlSqlModel::~QmlSqlModel()
 {
-    if ( m_queryString == queryString )
-        return;
-
-    m_queryString = queryString ;
+//   qDebug()<<"Destroy model"<<m_queryString;
 }
 
 
-QStringList QmlDataModel::rolesList() const
+QStringList QmlSqlModel::rolesList() const
 {
     return m_roleList;
 }
 
-QStringList QmlDataModel::typesList() const
+QStringList QmlSqlModel::typesList() const
 {
     return m_typeList;
 }
 
-QString QmlDataModel::errorString() const
+QString QmlSqlModel::errorString() const
 {
     return m_errorString;
 }
 
 
-bool QmlDataModel::exec()
+bool QmlSqlModel::exec(const QString &queryString)
 {
+    m_queryString  = queryString;
+
     QSqlDatabase db = QSqlDatabase::database();
     sqlmodel.setQuery(m_queryString, db);
-
-    //qDebug()<<m_queryString;
 
     if ( sqlmodel.lastError().isValid() )
     {
@@ -51,7 +47,7 @@ bool QmlDataModel::exec()
         qCritical()<<sqlmodel.lastError().text();
 
         m_errorString = sqlmodel.lastError().text();
-        emit errorStringChanged();
+        emit errorOccurred();
 
         return false;
     }
@@ -67,12 +63,11 @@ bool QmlDataModel::exec()
     }
     emit rolesListChanged();
 
-    //qDebug()<<sortColumn();
     return true;
 }
 
 
-QHash<int, QByteArray>QmlDataModel::roleNames() const
+QHash<int, QByteArray>QmlSqlModel::roleNames() const
 {
     QHash<int,QByteArray> hash;
 
@@ -82,48 +77,45 @@ QHash<int, QByteArray>QmlDataModel::roleNames() const
     return hash;
 }
 
-QString QmlDataModel::filterString() const
+QString QmlSqlModel::filterString() const
 {
     return m_filterString;
 }
-int QmlDataModel::filterColumn()
+int QmlSqlModel::filterColumn()
 {
     return m_filterColumn;
 }
 
-void QmlDataModel::setFilterString(const QString &filterString)
+void QmlSqlModel::setFilterString(const QString &filterString)
 {
     m_filterString = filterString;
     invalidateRowsFilter();
 }
 
-void QmlDataModel::setFilterColumn(int filterColumn)
+void QmlSqlModel::setFilterColumn(int filterColumn)
 {
     m_filterColumn = filterColumn;
     invalidateRowsFilter();
 }
 
-void QmlDataModel::setSort(int row, Qt::SortOrder order)
+void QmlSqlModel::setSort(int row, Qt::SortOrder order)
 {
-    qDebug()<<row<<order;
-    //setSortingEnabled(true);
-    sort(row, order);         // responsible call to make sorting, internally it will make a call to lessthan function
-//    invalidateFilter();
+    sort(row, order);
 }
 
 
-QVariant QmlDataModel::data(const QModelIndex &index, int role)const
+QVariant QmlSqlModel::data(const QModelIndex &index, int role)const
 {
-    QVariant value; // = QSqlQueryModel::data(index, role);
+    QVariant value;
 
     if(role < Qt::UserRole)
     {
-        value = sqlmodel.data(index, role);
+        value = QSortFilterProxyModel::data(index, role);
     }
     else
     {
         if (role==Qt::UserRole+1)
-            value = sqlmodel.data(index, Qt::DisplayRole);
+            value = QSortFilterProxyModel::data(index, Qt::DisplayRole);
         if (role==Qt::UserRole+2)
             value = m_typeList.value(index.column());
     }
@@ -132,46 +124,30 @@ QVariant QmlDataModel::data(const QModelIndex &index, int role)const
 }
 
 
-bool QmlDataModel::lessThan(const QModelIndex &left,
-                           const QModelIndex &right) const
+
+bool QmlSqlModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-
-    QVariant leftData = sourceModel()->data(left);
-    QVariant rightData = sourceModel()->data(right);
-
-//    qDebug()<<leftData<<rightData;
-
-    if (leftData.userType() == QMetaType::QDateTime) {
-        return leftData.toDateTime() < rightData.toDateTime();
-    } else {
-        if (leftData.userType() == QMetaType::Int) {
-            //qDebug()<<(leftData.toInt() < rightData.toInt());
-            return leftData.toInt() < rightData.toInt();
-        } else {
-            return QString::localeAwareCompare(leftData.toString(), rightData.toString()) < 0;
-        }
-    }
-}
-
-bool QmlDataModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
-{
-    if(m_filterColumn < 0)
-        return true;
+    //    if(m_filterColumn < -1)
+    //        return true;
     if(m_filterString.isEmpty() || m_filterString.isNull())
         return true;
 
-    QModelIndex index = sourceModel()->index(sourceRow, m_filterColumn, sourceParent);
-    QString data = sourceModel()->data(index, Qt::DisplayRole).value<QString>();
 
-    qDebug()<<sourceRow<<index<<data<<data.contains(m_filterString, Qt::CaseInsensitive);
+    for(int i=columnCount()-1;i>=0;i--){
+        if(!(m_filterColumn == -1 || m_filterColumn == i))
+            continue;
 
-    if(data.contains(m_filterString, Qt::CaseInsensitive))
-        return true;
+        QModelIndex index = sourceModel()->index(sourceRow, i, sourceParent);
+        QString data = sourceModel()->data(index, Qt::DisplayRole).value<QString>();
+
+        if(data.contains(m_filterString, Qt::CaseInsensitive))
+            return true;
+    }
 
     return false;
 }
 
-QVariant QmlDataModel::value(int row, int column, QVariant deflt) const
+QVariant QmlSqlModel::value(int row, int column, QVariant deflt) const
 {
     QModelIndex modelIndex = sqlmodel.index(row, column);
     QVariant val = sqlmodel.data(modelIndex, Qt::DisplayRole);
@@ -181,7 +157,7 @@ QVariant QmlDataModel::value(int row, int column, QVariant deflt) const
         return deflt;
 }
 
-QVariant QmlDataModel::value(int row, QString column, QVariant deflt) const
+QVariant QmlSqlModel::value(int row, QString column, QVariant deflt) const
 {
     return value(row, m_roleList.indexOf(column), deflt);
 }

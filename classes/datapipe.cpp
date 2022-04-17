@@ -3,13 +3,18 @@
 #include <QCoreApplication>
 #include <QNetworkInterface>
 
-Datapipe::Datapipe(QObject *parent) : QObject(parent)
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+Datapipe::Datapipe() : QObject(nullptr)
 {
     QString s = QCoreApplication::applicationDirPath() + "/" + QCoreApplication::applicationName();
 
     m_settings = new QSettings(s + ".ini", QSettings::IniFormat);
-   // m_settings->setIniCodec(QTextCodec::codecForName("UTF-8"));
+    // m_settings->setIniCodec(QTextCodec::codecForName("UTF-8"));
 }
+
 
 Datapipe::~Datapipe()
 {
@@ -53,6 +58,71 @@ void Datapipe::addTable(const QString &name, QVariantMap fields)
 {
     m_tables[name] = fields;
 }
+
+void Datapipe::setJsonMenu(const QByteArray &json)
+{
+    m_jsonMenu = json;
+}
+
+QString Datapipe::menuFromArray(const QJsonArray &ar, int deep)
+{
+    QString result;
+    QString deeps;
+    deeps.fill(' ',deep*3);
+
+    for (auto menu : ar) {
+        QJsonObject element = menu.toObject();
+        if(element.value(u"type"_qs).toString()==u"Item"_qs){
+            result += u"\n%1MenuItem{\n   %2text:\"%3\"\n\n   %4onTriggered:{windowManager.push(\"file:%5\")}\n%6}"_qs.arg(
+                        deeps,
+                        deeps,
+                        element.value(u"name"_qs).toString(),
+                        deeps,
+                        element.value(u"qml"_qs).toString(),
+                        deeps
+                        );
+        }
+        if(element.value(u"type"_qs).toString()==u"Separator"_qs){
+            result += u"\n%1MenuSeparator{}"_qs.arg(
+                        deeps);
+        }
+        if(element.value(u"type"_qs).toString()==u"Menu"_qs){
+            result += u"\n%1Menu{\n   %2title:\"%3\"\n %4%5\n%6}"_qs.arg(
+                        deeps, deeps,
+                        element.value(u"name"_qs).toString(),
+                        deeps,
+                        menuFromArray(element.value(u"items"_qs).toArray(), deep+1),
+                        deeps);
+        }
+    }
+
+    return result;
+}
+
+
+QString Datapipe::jsonMenu()
+{
+    QJsonParseError perr;
+    QJsonDocument jdoc = QJsonDocument::fromJson(m_jsonMenu, &perr);
+    if (jdoc.isNull()){
+        qCritical()<<u"Error loading json menu"_qs;
+        qCritical()<<perr.errorString();
+        qCritical()<<m_jsonMenu;
+        return QString();
+    }
+
+    QJsonObject obj = jdoc.object();
+
+    QString menu;
+    if (obj.contains(u"items"_qs)){
+        menu = menuFromArray(obj.value(u"items"_qs).toArray(),1);
+    }
+    QString result = u"import QtQuick\nimport QtQuick.Controls\nMenuBar{\n%1\n}"_qs.arg(menu);
+
+    return result;
+}
+
+
 
 QString Datapipe::inetAdresses()
 {

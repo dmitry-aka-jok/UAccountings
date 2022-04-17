@@ -2,26 +2,27 @@
 #define QMLSQL_H
 
 #include <QObject>
-
+#include <QQmlEngine>
 
 #include "qmlsqltable.h"
 
-#include "classes/datapipe.h"
+#include "datapipe.h"
 
 class QmlSql : public QObject
 {
     Q_OBJECT
+
 public:
-    explicit QmlSql(Datapipe *datapipe, QObject *parent = nullptr);
+    explicit QmlSql(QObject *parent = nullptr);
 
     Q_INVOKABLE void defineTable(QString name, QVariantMap fields);
     Q_INVOKABLE QmlSqlTable *table(QString name);
 
     static QString formatToSQL(QVariant val);
-signals:
 
 private:
-    Datapipe* datapipe;
+    Datapipe *datapipe;
+
 };
 
 #endif // QMLSQL_H

@@ -4,35 +4,24 @@
 #include <QDebug>
 #include <QVariant>
 
-QmlSql::QmlSql(Datapipe *datapipe, QObject *parent)
-    : QObject{parent}, datapipe(datapipe)
+QmlSql::QmlSql(QObject *parent)
+    : QObject{parent}
 {
-
+    datapipe = Datapipe::instance();
 }
 
 void QmlSql::defineTable(QString name, QVariantMap fields)
 {
-    //QmlSqlTable *qmltable = new QmlSqlTable(datapipe);
-    //qmltable->setTable(name);
-    //qmltable->setFields(fields);
-
     datapipe->addTable(name, fields);
-    //qDebug()<<name<<fields;
-
-    // validate will be actual later
-    //if (!qmltable->validate()){
-    //    qCritical()<<u"Error validating table"_qs<<name;
-    //    qCritical()<<qmltable->lastError();
-    //}
-
-    //return qmltable;
 }
 
 QmlSqlTable *QmlSql::table(QString name)
 {
-    QmlSqlTable *qmltable = new QmlSqlTable(datapipe);
+    QmlSqlTable *qmltable = new QmlSqlTable();
     qmltable->setTable(name);
     qmltable->setFields(datapipe->table(name));
+
+    //qDebug()<<datapipe->tables()<<name<<datapipe->table(name);
 
     return qmltable;
 }

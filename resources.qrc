@@ -8,5 +8,14 @@
         <file>icons/fi-bs-arrows-h-copy.svg</file>
         <file>icons/fi-bs-menu-burger.svg</file>
         <file>icons/fi-bs-sign-out-alt.svg</file>
+        <file>store/qtquickcontrols2.conf</file>
+        <file>store/qml/Goods.qml</file>
+        <file>store/init/init.js</file>
+        <file>store/init/menu.json</file>
+        <file>store/delegates/DrawerItem.qml</file>
+        <file>store/delegates/HeaderDelegate.qml</file>
+        <file>store/modules/Table.qml</file>
+        <file>store/modules/Template.qml</file>
+        <file>store/main.qml</file>
     </qresource>
 </RCC>

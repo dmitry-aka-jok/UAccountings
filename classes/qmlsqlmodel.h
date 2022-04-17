@@ -14,25 +14,23 @@
 
 #include "datapipe.h"
 
-class QmlDataModel : public QSortFilterProxyModel
+class QmlSqlModel : public QSortFilterProxyModel
 {
     Q_OBJECT
-    Q_PROPERTY(QStringList rolesList READ rolesList  NOTIFY rolesListChanged)
-    Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
-    Q_PROPERTY(int filterColumn READ filterColumn WRITE setFilterColumn NOTIFY filterColumnChanged)
+//    Q_PROPERTY(QStringList rolesList READ rolesList  NOTIFY rolesListChanged)
+//    Q_PROPERTY(QString filterString READ filterString WRITE setFilterString NOTIFY filterStringChanged)
+//    Q_PROPERTY(int filterColumn READ filterColumn WRITE setFilterColumn NOTIFY filterColumnChanged)
 
 public:
-    explicit QmlDataModel(Datapipe *datapipe, QObject *parent = nullptr);
-
-    void setQueryString(const QString &queryString);
+    explicit QmlSqlModel(QObject *parent = nullptr);
+    ~QmlSqlModel();
 
     Q_INVOKABLE QStringList rolesList() const;
     Q_INVOKABLE QStringList typesList() const;
 
     QString errorString ()const;
 
-    bool exec();
-
+    bool exec(const QString &queryString);
 
     QVariant data(const QModelIndex &index, int role)const;
 
@@ -48,16 +46,16 @@ public:
     Q_INVOKABLE void setFilterColumn(int filterColumn);
 
     Q_INVOKABLE void setSort(int row,  Qt::SortOrder order);
+
 signals:
     void filterStringChanged(QString filterString);
     void filterColumnChanged(int filterColumn);
 
     void rolesListChanged();
-    void errorStringChanged();
+    void errorOccurred();
 
 protected:
-    bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const;   // custom sort logic
-    bool filterAcceptsRow(int sourceRow,const QModelIndex &sourceParent) const;             // custom filter logic
+    bool filterAcceptsRow(int sourceRow,const QModelIndex &sourceParent) const;
 
 private:
     QString m_queryString;

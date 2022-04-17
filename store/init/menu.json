@@ -1,0 +1,25 @@
+{
+    "type":"Menu",
+    "items":[
+    {
+        "type":"Menu",
+        "name":"Документи",
+        "items":[
+                {"type":"Item", "name":"Надходження",    "qml": "qml/Income.qml"},
+                {"type":"Item", "name":"Реалізація",     "qml": "qml/Sell.qml"},
+                {"type":"Separator"},
+                {"type":"Item", "name":"Інвентаризація", "qml": "qml/Inventory.qml"}
+                ]
+    },
+    {
+        "type":"Menu",
+        "name":"Довідники",
+        "items":[
+                {"type":"Item", "name":"Товари",    "qml": "qml/Goods.qml"},
+                {"type":"Item", "name":"Клієнти",   "qml": "qml/Clients.qml"}
+                ]
+    }
+
+
+    ]
+}

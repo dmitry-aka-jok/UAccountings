@@ -1,7 +1,14 @@
 .pragma library
 .import UA.SQL as SQL
 
-function database(){
+
+function initUA(){
+  initDatabase()
+  console.log("Store database")
+}
+
+
+function initDatabase(){
     SQL.SQL.defineTable("users", {
                     id:{type:"PK"},
                     name:{type:"String",name:"Назва"},
@@ -28,3 +35,4 @@ function database(){
                     name:{type:"String",name:"Назва"}
                 });
 }
+

@@ -1,9 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-
 #include <QCommandLineParser>
 
 #include <QSqlDatabase>
@@ -13,6 +10,7 @@
 
 #include <QDebug>
 #include <QFile>
+#include <QDirIterator>
 
 #include "build_defs.h"
 #include "classes/datapipe.h"
@@ -20,12 +18,15 @@
 #include "classes/qmlsqltable.h"
 #include "classes/qmlsqlmodel.h"
 
+#include "classes/qmltreemodel.h"
+#include "classes/qmltreeelement.h"
+
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-//    app.setWindowIcon(QIcon(QT_ICON_PATH)); // iconless on taskbar? not anymore.
+    //    app.setWindowIcon(QIcon(QT_ICON_PATH)); // iconless on taskbar? not anymore.
 
     app.setOrganizationName("Majister");
     app.setOrganizationDomain("uvelirsoft.com.ua");
@@ -66,17 +67,17 @@ int main(int argc, char *argv[])
     // Process the actual command line arguments given by the user
     parser.process(app);
 
-//    const QStringList args = parser.positionalArguments();
-//    if(args.length()==0){
-//        qCritical()<<"No file to sync ";
-//        return -1;
-//    }
-//    QString filename = args.at(0);
+    //    const QStringList args = parser.positionalArguments();
+    //    if(args.length()==0){
+    //        qCritical()<<"No file to sync ";
+    //        return -1;
+    //    }
+    //    QString filename = args.at(0);
 
-    bool replaceSettings = parser.isSet(verboseOption);
+    bool replaceSettings = parser.isSet(replaceOption);
 
 
-    Datapipe* datapipe = new Datapipe();
+    Datapipe* datapipe = Datapipe::instance();
 
     QSettings *settings = datapipe->getSettings();
 
@@ -147,23 +148,67 @@ int main(int argc, char *argv[])
         }
 
 
+    if (replaceSettings) {
+        QStringList copyList;
+        copyList<<u":/store/"_qs;
+        QStringList skipList;
+//        skipList<<u":/UAccounting/init/"_qs;
+
+        for(const auto &cp : copyList){
+            QDirIterator it(cp, {u"*.qml"_qs,u"*.js"_qs,u"*.json"_qs,u"*.conf"_qs}, QDir::Files, QDirIterator::Subdirectories);
+            while (it.hasNext()) {
+                QString filenameint = it.next();
+                bool skipThis = false;
+                for(const auto &sk : skipList){
+                    if(filenameint.startsWith(sk)){
+                        skipThis = true;
+                        break;
+                    }
+                }
+                if(skipThis)
+                    continue;
+
+                QString filename = filenameint.mid(cp.length());
+
+                QString dirname = QFileInfo(filename).absoluteDir().absolutePath();
+
+                QDir dir;
+                if (!dir.exists(dirname))
+                    dir.mkpath(dirname);
+
+                if(QFile::exists(filename))
+                    QFile::remove(filename);
+
+                QFile::copy(filenameint, filename);
+            }
+        }
+    }
+
+    QFile fmenu(u"init/menu.json"_qs);
+    if (fmenu.open(QIODevice::ReadOnly | QIODevice::Text))
+        datapipe->setJsonMenu(fmenu.readAll());
+
+
+
 
     QQmlApplicationEngine engine;
-    const QUrl url(u"qrc:/UAccounting/main.qml"_qs);
-//    engine.addImportPath("qrc:////modules"); // modules
+    const QUrl url(u"file:main.qml"_qs);
 
     //qmlRegisterSingletonInstance("UA.Settings",1,0, "Datapipe", datapipe);
-    engine.rootContext()->setContextProperty("datapipe", datapipe);
+    //engine.rootContext()->setContextProperty("datapipe", datapipe);
+
+    qmlRegisterSingletonInstance("UA.Datapipe",1,0, "Datapipe", datapipe);
 
 
-    QmlSql qmlsql(datapipe);
-    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQL", &qmlsql);
+    QmlSql sql;
+    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQL", &sql);
 
     qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
-    qmlRegisterType<QmlDataModel>("UA.SQL",1,0, "SQLModel");
+    qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");
 
+    qmlRegisterType<QmlTreeModel>("UA.Tree",1,0, "TreeModel");
+    qmlRegisterType<QmlTreeElement>("UA.Tree",1,0, "TreeElement");
 
-//    qmlRegisterUncreatableMetaObject(MetaTypeNamespace::staticMetaObject, "UA.Types", 0, 1, "MetaType", "Access to enums & flags only");
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
