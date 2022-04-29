@@ -12,7 +12,6 @@
 #include <QVariant>
 #include <QStringList>
 
-#include "datapipe.h"
 
 class QmlSqlModel : public QSortFilterProxyModel
 {
@@ -37,6 +36,7 @@ public:
 
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
+    Q_INVOKABLE QVariantMap sqlIndex(int row) const;
     Q_INVOKABLE QVariant value(int row, int column, QVariant deflt = QVariant()) const;
     Q_INVOKABLE QVariant value(int row, QString column, QVariant deflt = QVariant()) const;
 
@@ -68,11 +68,11 @@ private:
 
     QStringList m_roleList;
     QStringList m_typeList;
+    QList<int> m_digitsList;
     QString m_errorString;
     QString m_filterString;
     int m_filterColumn;
 
-    Datapipe *datapipe;
     QSqlQueryModel sqlmodel;
 };
 #endif // QMLSQLMODEL_H

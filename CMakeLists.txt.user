@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 7.0.0, 2022-04-15T23:34:50. -->
+<!-- Written by QtCreator 7.0.0, 2022-04-28T23:34:09. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -308,7 +308,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">appUAccounting</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeRunConfiguration.appUAccounting</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">appUAccounting</value>
-    <value type="QString" key="RunConfiguration.Arguments">-r</value>
+    <value type="QString" key="RunConfiguration.Arguments">-r debugQueries</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseLibrarySearchPath">true</value>

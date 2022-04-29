@@ -9,9 +9,11 @@ Rectangle {
         id: label
         anchors.fill: parent
         verticalAlignment: Text.AlignVCenter
-        horizontalAlignment: Text.AlignHCenter
+        horizontalAlignment: label.implicitWidth > width ? Text.AlignLeft : Text.AlignHCenter
         rightPadding: 5
         leftPadding: 5
         font.bold: true
+
+        clip: true
     }
 }

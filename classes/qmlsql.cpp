@@ -1,30 +1,7 @@
 #include "qmlsql.h"
 
-
-#include <QDebug>
 #include <QVariant>
 
-QmlSql::QmlSql(QObject *parent)
-    : QObject{parent}
-{
-    datapipe = Datapipe::instance();
-}
-
-void QmlSql::defineTable(QString name, QVariantMap fields)
-{
-    datapipe->addTable(name, fields);
-}
-
-QmlSqlTable *QmlSql::table(QString name)
-{
-    QmlSqlTable *qmltable = new QmlSqlTable();
-    qmltable->setTable(name);
-    qmltable->setFields(datapipe->table(name));
-
-    //qDebug()<<datapipe->tables()<<name<<datapipe->table(name);
-
-    return qmltable;
-}
 
 QString QmlSql::formatToSQL(QVariant val)
 {

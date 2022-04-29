@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QVariant>
 
-#include "datapipe.h"
 #include "qmlsqlmodel.h"
 
 class QmlSqlTable : public QObject
@@ -28,6 +27,7 @@ public:
 
     Q_INVOKABLE bool insert(QVariantMap fields, QVariantList returns);
     Q_INVOKABLE bool update(QVariantMap fields, QVariantMap conditions);
+    Q_INVOKABLE bool update(QVariantMap fields, QString conditions);
     Q_INVOKABLE bool insert_or_update(QVariantMap fields, QVariantMap conditions);
     Q_INVOKABLE bool remove(QVariantMap fields);
 
@@ -40,7 +40,6 @@ signals:
 private:
     QString m_table;
     QVariantMap m_fields;
-    Datapipe* datapipe;
     QString m_lastError;
 };
 

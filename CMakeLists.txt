@@ -25,6 +25,8 @@ qt_add_executable(appUAccounting
     classes/qmltreemodel.h
     classes/qmltreemodel.cpp
 
+    classes/uatable.h
+    classes/uatable.cpp
 
     resources.qrc
     main.cpp
@@ -36,15 +38,9 @@ qt_add_executable(appUAccounting
 #    URI UAccounting
 #    VERSION 1.0
 #    QML_FILES
-#
+
 #    main.qml
 #)
-
-#modules/Template.qml
-#modules/Table.qml
-#delegates/DrawerItem.qml
-#delegates/HeaderDelegate.qml
-#init/init.js
 
 
 set_target_properties(appUAccounting PROPERTIES

@@ -3,12 +3,11 @@
 #include <QSqlQuery>
 #include <QSqlError>
 
-#include "qmlsql.h"
+#include "datapipe.h"
 
 QmlSqlTable::QmlSqlTable(QObject *parent)
     : QObject{parent}
 {
-    datapipe = Datapipe::instance();
 }
 
 void QmlSqlTable::setTable(const QString &table)
@@ -35,6 +34,8 @@ QVariantMap QmlSqlTable::fields()
 
 bool QmlSqlTable::validate()
 {
+    Datapipe *datapipe = Datapipe::instance();
+
     m_lastError.clear();
 
     if(m_table.isEmpty()){
@@ -72,7 +73,7 @@ bool QmlSqlTable::validate()
 
 QmlSqlModel* QmlSqlTable::select(QVariantMap query)
 {
-    QmlSqlModel* model = new QmlSqlModel(datapipe);
+    QmlSqlModel* model = new QmlSqlModel();
 
     model->exec(m_table, m_fields, query);
 
@@ -83,6 +84,8 @@ QmlSqlModel* QmlSqlTable::select(QVariantMap query)
 bool QmlSqlTable::insert(QVariantMap fields, QVariantList returns)
 {
     Q_UNUSED(returns)
+
+    Datapipe *datapipe = Datapipe::instance();
 
     if (fields.isEmpty()){
         m_lastError = u"Empty query"_qs;
@@ -142,6 +145,8 @@ bool QmlSqlTable::update(QVariantMap fields, QVariantMap conditions)
         return false;
     }
 
+    Datapipe *datapipe = Datapipe::instance();
+
     QStringList fieldsUpdate;
     foreach(auto key, fields.keys()){
         fieldsUpdate.append(u"%1 = ?"_qs.arg(key));
@@ -179,6 +184,49 @@ bool QmlSqlTable::update(QVariantMap fields, QVariantMap conditions)
     return true;
 }
 
+bool QmlSqlTable::update(QVariantMap fields, QString conditions)
+{
+    // can't merge updates becouse of 2 bindings condition values
+
+    if (fields.isEmpty() || conditions.isEmpty()){
+        m_lastError = u"Empty query"_qs;
+        return false;
+    }
+
+    Datapipe *datapipe = Datapipe::instance();
+
+    QStringList fieldsUpdate;
+    foreach(auto key, fields.keys()){
+        fieldsUpdate.append(u"%1 = ?"_qs.arg(key));
+    }
+
+    QString queryString = u"UPDATE %1 SET %2 WHERE %3"_qs
+            .arg(m_table, fieldsUpdate.join(','), conditions);
+
+    QSqlQuery query;
+    query.prepare(queryString);
+    foreach(auto key, fields.keys())
+        query.addBindValue(fields.value(key));
+
+    if(datapipe->variable("debugQueries", false).toBool()){
+        qDebug()<<queryString;
+        qDebug()<<query.boundValues();
+    }
+
+    if(!query.exec()){
+        m_lastError = query.lastError().text();
+
+        qCritical()<<m_lastError;
+        qCritical()<<u"Query:"_qs<<query.lastQuery();
+        qCritical()<<u"Values:"_qs<<query.boundValues();
+
+        return false;
+    }
+
+    return true;
+
+}
+
 
 
 
@@ -188,6 +236,8 @@ bool QmlSqlTable::insert_or_update(QVariantMap fields, QVariantMap conditions)
         m_lastError = u"Empty query"_qs;
         return false;
     }
+
+    Datapipe *datapipe = Datapipe::instance();
 
     QStringList fieldsFullHolder;
     fieldsFullHolder.fill("?",fields.count()+conditions.count());
@@ -240,6 +290,8 @@ bool QmlSqlTable::remove(QVariantMap fields)
         m_lastError = u"Empty query"_qs;
         return false;
     }
+
+    Datapipe *datapipe = Datapipe::instance();
 
     QStringList fieldsRemove;
     foreach(auto key, fields.keys()){

@@ -15,11 +15,14 @@
 #include "build_defs.h"
 #include "classes/datapipe.h"
 #include "classes/qmlsql.h"
+
 #include "classes/qmlsqltable.h"
 #include "classes/qmlsqlmodel.h"
 
 #include "classes/qmltreemodel.h"
 #include "classes/qmltreeelement.h"
+
+#include "classes/uatable.h"
 
 
 int main(int argc, char *argv[])
@@ -200,10 +203,10 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("UA.Datapipe",1,0, "Datapipe", datapipe);
 
 
-    QmlSql sql;
-    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQLCore", &sql);
+    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQLCore", QmlSql::instance());
     qRegisterMetaType<QmlSql::FieldType>("SQLCore::FieldType");
 
+    qmlRegisterType<UATable>("UA.SQL",1,0, "UATable");
 
     qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
     qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");

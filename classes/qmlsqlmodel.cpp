@@ -2,13 +2,13 @@
 
 #include <QDateTime>
 
+#include "datapipe.h"
 #include "qmlsql.h"
 
 
 QmlSqlModel::QmlSqlModel(QObject *parent) :
     QSortFilterProxyModel(parent)
 {
-    datapipe = Datapipe::instance();
     setSourceModel(&sqlmodel);
     m_filterColumn = -1;
 }
@@ -40,6 +40,7 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
     m_table  = table;
     m_fields = fields;
 
+    Datapipe *datapipe = Datapipe::instance();
 
     QString queryPrefixs, queryFields, queryJoins, queryWheres, queryLimits, queryOrders, queryHavings;
 
@@ -49,6 +50,8 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
     else
         alias = table;
 
+    QMap<QString, QString> aliases;
+    aliases.insert(table, alias);
 
     bool isFirst;
 
@@ -65,33 +68,7 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
 
 
 
-    if (query.contains(u"fields"_qs)){
-        // Array or only one field
-        if (query.value(u"fields"_qs).typeName() == u"QVariantList"_qs){
-            fieldsList<<query.value(u"fields"_qs).toList();
-        }else{
-            fieldsList <<query.value(u"fields"_qs);
-        }
-    }else{
-        // append all fields
-        foreach(auto var, fields.keys()){
-            fieldsList.append(var);
-        }
-    }
-    isFirst=true;
-    foreach(auto var, fieldsList){
-        QString svar = var.toString();
-        if (!svar.contains(u"."_qs))
-            svar = alias+u"."_qs+svar;
-        if(isFirst)
-            isFirst = false;
-        else
-            svar = u", %1"_qs.arg(svar);
-
-        queryFields +=  svar;
-    }
-
-
+    // joins first - to get right aliases
     QVariantList joins;
     if (query.contains(u"joins"_qs)){
         if (query.value(u"joins"_qs).typeName() == u"QVariantList"_qs){
@@ -113,8 +90,10 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
             QString joinTable = svar;
             QString joinOn;
 
+            aliases.insert(joinTable, joinTable);
+
             foreach (auto tbl, tables){
-                QVariantMap tblconf = datapipe->table(tbl);
+                QVariantMap tblconf = datapipe->tableDefinition(tbl);
                 foreach (auto fld, tblconf.keys()){ // fields
                     QVariantMap fldconf = tblconf.value(fld).toMap();
                     if (fldconf.contains(u"reference"_qs)){
@@ -129,7 +108,7 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
             }
 
             if(joinOn.isEmpty()){
-                QVariantMap tblconf = datapipe->table(joinTable);
+                QVariantMap tblconf = datapipe->tableDefinition(joinTable);
                 foreach (auto fld, tblconf.keys()){ // fields
                     QVariantMap fldconf = tblconf.value(fld).toMap();
                     if (fldconf.contains(u"reference"_qs)){
@@ -147,10 +126,89 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
 
             tables.append(svar);
 
-            svar = u" join %1%2"_qs.arg(svar, joinOn);
+            svar = u"join %1%2"_qs.arg(svar, joinOn);
         }
-        queryJoins +=  svar;//u" %1"_qs.arg(svar);
+        else
+        {
+            QRegularExpression re("join (\\w+) (\\w+)");
+            QRegularExpressionMatch match = re.match(svar);
+            if (match.hasMatch()) {
+                QString joinTable = match.captured(1);
+                QString joinAlias = match.captured(2);
+                aliases.insert(joinAlias, joinTable);
+
+            }
+        }
+
+
+        queryJoins += u" "_qs + svar;
     }
+
+
+
+    m_typeList.clear();
+    m_digitsList.clear();
+
+
+    if (query.contains(u"fields"_qs)){
+        // Array or only one field
+        if (query.value(u"fields"_qs).typeName() == u"QVariantList"_qs){
+            fieldsList<<query.value(u"fields"_qs).toList();
+        }else{
+            fieldsList<<query.value(u"fields"_qs);
+        }
+    }else{
+        // append all fields
+        foreach(auto var, fields.keys()){
+            fieldsList.append(var);
+        }
+    }
+    isFirst=true;
+
+    int cnt = 0;
+    foreach(auto var, fieldsList){
+        QString svar = var.toString();
+        if (!svar.contains(u"."_qs))
+            svar = u"%1.%2"_qs.arg(alias, svar);
+
+        QString currAlias = svar.left(svar.indexOf('.'));
+        QString currField = svar.mid(svar.indexOf('.')+1);
+        QVariantMap fieldDescr = datapipe->tableDefinition(aliases.value(currAlias)).value(currField).toMap();
+
+        QmlSql::FieldType fieldType = static_cast<QmlSql::FieldType>(fieldDescr.value(u"type"_qs).toInt());
+
+        if(cnt>=m_fieldsPK.count()){ // skip PKs
+            m_digitsList.append(fieldDescr.value(u"digits"_qs,0).toInt());
+
+            if(fieldType==QmlSql::PK || fieldType==QmlSql::FK || fieldType==QmlSql::Int){
+                m_typeList.append(u"Int"_qs);
+            }else{
+                if(fieldType==QmlSql::Bool){
+                    m_typeList.append(u"Bool"_qs);
+                }else{
+                    if(fieldType==QmlSql::String){
+                        m_typeList.append(u"String"_qs);
+                    }else{
+                        if(fieldType==QmlSql::Numeric){
+                            m_typeList.append(u"Numeric"_qs);
+                        }else{
+                            m_typeList.append(u"String"_qs);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        if(isFirst)
+            isFirst = false;
+        else
+            svar = u", %1"_qs.arg(svar);
+
+        queryFields +=  svar;
+        cnt++;
+    }
+
 
 
     QVariantList wheres;
@@ -249,6 +307,8 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
                  queryOrders,
                  queryHavings);
 
+ //   qDebug()<<queryString;
+
     if(datapipe->variable("debugQueries", false).toBool())
         qDebug()<<queryString;
 
@@ -269,14 +329,14 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
     }
 
     m_roleList.clear();
-    m_typeList.clear();
+    //    m_typeList.clear();
 
     QSqlRecord r = sqlmodel.record();
     // skip shadow PK fields
     for( int i = m_fieldsPK.count(); i < r.count(); i++)
     {
         m_roleList.append(r.fieldName(i).toLatin1());
-        m_typeList.append(r.field(i).metaType().name());
+        //        m_typeList.append(r.field(i).metaType().name());
     }
     emit rolesListChanged();
 
@@ -313,9 +373,10 @@ QHash<int, QByteArray>QmlSqlModel::roleNames() const
 {
     QHash<int,QByteArray> hash;
 
-    hash.insert(Qt::UserRole+1, "Display"); // QByteArray(record().fieldName(i).toLatin1())
-    hash.insert(Qt::UserRole+2, "Type"); // QByteArray(record().fieldName(i).toLatin1())
-    hash.insert(Qt::UserRole+3, "Index"); // QByteArray(record().fieldName(i).toLatin1())
+    hash.insert(Qt::UserRole+1, "Display");
+    hash.insert(Qt::UserRole+2, "Type");
+    hash.insert(Qt::UserRole+3, "Index");
+    hash.insert(Qt::UserRole+4, "Digits");
 
     return hash;
 }
@@ -334,8 +395,12 @@ QVariant QmlSqlModel::data(const QModelIndex &index, int role)const
             QModelIndex modelIndex = this->index( index.row(), index.column() + m_fieldsPK.count());
             value = QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole);
         }
-        if (role==Qt::UserRole+2)
+        if (role==Qt::UserRole+2){
             value = m_typeList.value(index.column());
+        }
+        if (role==Qt::UserRole+4){
+            value = m_digitsList.value(index.column());
+        }
 
         if (role==Qt::UserRole+3){
             QString vm;
@@ -354,7 +419,6 @@ QVariant QmlSqlModel::data(const QModelIndex &index, int role)const
                             );
             }
 
-            //qDebug()<<vm;
             return vm;
         }
     }
@@ -367,17 +431,31 @@ int QmlSqlModel::columnCount(const QModelIndex &parent) const
     return QSortFilterProxyModel::columnCount(parent) - m_fieldsPK.count();
 }
 
+QVariantMap QmlSqlModel::sqlIndex(int row) const
+{
+    QStringList fieldsPK;
+    fieldsPK<<m_fieldsPK.keys();
+    QVariantMap res;
+
+    for(int i=0, cnt = m_fieldsPK.count(); i < cnt; i++){
+        QModelIndex modelIndex = this->index( row, i);
+        res.insert(fieldsPK.at(i),QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole));
+    }
+    return res;
+}
+
 
 
 bool QmlSqlModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
     //    if(m_filterColumn < -1)
     //        return true;
+
     if(m_filterString.isEmpty() || m_filterString.isNull())
         return true;
 
 
-    for(int i=0;i<columnCount();i--){
+    for(int i=0, cnt=columnCount();i<cnt;i++){
         if(!(m_filterColumn == -1 || m_filterColumn == i))
             continue;
 
@@ -393,8 +471,12 @@ bool QmlSqlModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParen
 
 QVariant QmlSqlModel::value(int row, int column, QVariant deflt) const
 {
+//    if(sqlmodel.columnCount()<(column+1) || sqlmodel.rowCount() < (row+1))
+//        return deflt;
+
     QModelIndex modelIndex = sqlmodel.index(row, column + m_fieldsPK.count());
     QVariant val = sqlmodel.data(modelIndex, Qt::DisplayRole);
+
     if(val.isValid())
         return val;
     else

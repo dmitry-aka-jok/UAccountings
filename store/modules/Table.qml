@@ -13,193 +13,18 @@ import UA.Datapipe
 import "../delegates"
 
 
-Item {
+UATable {
   id: tableRoot
-  property var sqlModel;
 
-  required property string tableName;
-  required property var fields;
-
-  property var fieldsWidths : [];
-  property var fieldsTypes : [];
-
-  property int minimalFieldWidth: 50
   property int headerHeight: 30
-  property int sortField;
-  property int sortOrder;
-  property int filterField;
 
-  property var beforeEdit: [];
-  property string editStatement;
-  property var selFields : [];
-  property var selJoins  : [];
+  property alias editor: editorLoader.sourceComponent;
 
-
-/*
-  function UATable(tableName, fields)
-
-
-
-  tableName: "goods"
-  fields : [
-    {field:"name", name:"Назва", onChange: "function(item){}" },
-    {field:"goodsgroups_id", name:"Група", foreign_table:"goodsgroups", foreign_key:"id", foreign_name:"name"}
-  ];
-  actions : {onCreate: onSave: }
-
-  onFieldNameChanged
-
-*/
-
+  property alias model: table.model
 
   Component.onCompleted: {
-
-    for(var i=0; i<fields.length; i++){
-      if(typeof fields[i]["foreign_table"] === 'undefined')
-        selFields.push(fields[i]["field"])
-      else{
-        selFields.push(fields[i]["foreign_table"]+"."+fields[i]["foreign_name"])
-        selJoins.push(fields[i]["foreign_table"])
-      }
-    }
-
-    sqlModel = SQLCore.table(tableName).select({fields:selFields, joins:selJoins});
-
-    let types = sqlModel.typesList();
-
-    let sqlSettings = SQLCore.table("settings").select({fields:"value", where:{"section":tableName, "option":"columnsWidth", "user_id":Datapipe.variable("user_id",-1)}});
-    let vvv = sqlSettings.value(0,0,"").split(",");
-
-    for (let i = 0; i < fields.length; i++) {
-      if (fields[i]["visible"] === false)
-        fieldsWidths[i] = 0;
-      else
-        if(typeof vvv[i] !== 'undefined')
-          fieldsWidths[i] = Math.max(vvv[i], minimalFieldWidth) ;
-        else
-          fieldsWidths[i] = minimalFieldWidth;
-
-      fieldsTypes[i] = types[i];
-    }
-    sqlSettings = SQLCore.table("settings").select(
-          {fields:"value", where:{"section":tableName, "option":"filterField", "user_id":Datapipe.variable("user_id",-1)}});
-    filterField = sqlSettings.value(0,0,-1);
-
-    sqlModel.setFilterColumn(filterField);
-
-    sqlSettings = SQLCore.table("settings").select(
-          {fields:"value", where:{"section":tableName, "option":"sortField", "user_id":Datapipe.variable("user_id",-1)}});
-    sortField = sqlSettings.value(0,0,-1);
-
-    sqlSettings = SQLCore.table("settings").select(
-          {fields:"value", where:{"section":tableName, "option":"sortOrder", "user_id":Datapipe.variable("user_id",-1)}});
-    sortOrder = sqlSettings.value(0,0,0);
-
-    setSort();
-
-
-    let inputFormFields = "";
-    let fillFormFields = "";
-    let saveFormFields = "";
-    for (i = 0; i < fields.length; i++) {
-      inputFormFields += `
-      Label{
-        id: name_${fields[i]["field"]}
-        text:"${fields[i]["name"]}"
-      }
-      TextField{
-        id: field_${fields[i]["field"]}
-        Layout.fillWidth : true
-      }`;
-
-      fillFormFields += `
-           field_${fields[i]["field"]}.text = editorModel.value(0,${i},-1);`
-      saveFormFields += `
-           if (field_${fields[i]["field"]}.text !== beforeEdit[${i}])
-              saveFields.set("${fields[i]["field"]}", field_${fields[i]["field"]}.text)
-      `;
-    }
-
-    let text = `
-    import QtQuick
-    import QtQuick.Layouts
-    import QtQuick.Controls
-
-    import UA.SQL
-    import UA.Datapipe
-
-    GridLayout{
-      id: editorGrid
-      width: parent.width
-      columns: 2
-      ${inputFormFields}
-
-      Button {
-        id: btCancel
-        text: "Відміна"
-        onClicked: {
-          tableRoot.state = ""
-        }
-      }
-      Button {
-        id: btOk
-        text: "Ok"
-        onClicked: {
-          let saveFields = new Map()
-          ${saveFormFields}
-          console.log(saveFields)
-          if(saveFields.size > 0)
-            console.log("yep")
-
-          tableRoot.state = ""
-        }
-      }
-
-      onVisibleChanged: {
-        if(editorGrid.visible===true){
-           let editorModel = SQLCore.table(tableName).select({fields:selFields, joins:selJoins, where:tableRoot.editStatement});
-           beforeEdit = [];
-           for(let i=0; i<fields.length; i++)
-              beforeEdit[i] = editorModel.value(0,i,-1);
-           ${fillFormFields}
-        }
-      }
-
-    }
-    `
-    console.log(text)
-    Qt.createQmlObject(text, editor)
-
-  }
-
-  function saveWidths() {
-    let sss = "";
-    for (let column = 0; column < fields.length; column++) {
-      sss += (column==0?"":",")+fieldsWidths[column];
-    }
-
-    //console.log(sss)
-    SQLCore.table("settings").insert_or_update(
-          {"value":sss}, {"section":tableName, "option":"columnsWidth", "user_id":Datapipe.variable("user_id",-1)})
-  }
-  function saveFilter() {
-    SQLCore.table("settings").insert_or_update(
-          {"value":filterField}, {"section":tableName, "option":"filterField", "user_id":Datapipe.variable("user_id",-1)})
-  }
-  function saveSort() {
-    SQLCore.table("settings").insert_or_update(
-          {"value":sortField}, {"section":tableName, "option":"sortField", "user_id":Datapipe.variable("user_id",-1)})
-    SQLCore.table("settings").insert_or_update(
-          {"value":sortOrder}, {"section":tableName, "option":"sortOrder", "user_id":Datapipe.variable("user_id",-1)})
-  }
-
-  function setSort(){
-    if (sortOrder==0)
-      sqlModel.setSort(-1, Qt.AscendingOrder)
-    if (sortOrder==1)
-      sqlModel.setSort(sortField, Qt.AscendingOrder)
-    if (sortOrder==2)
-      sqlModel.setSort(sortField, Qt.DescendingOrder)
+    init()
+    tableRoot.model = sqlModel
   }
 
 
@@ -231,16 +56,12 @@ Item {
           cursorShape: Qt.SizeHorCursor
           onMouseXChanged: {
             if (drag.active) {
-              //console.log(mouseX, headerDelegate.width)
               var newWidth = headerDelegate.width + mouseX
-              if (newWidth >= minimalFieldWidth) {
-                fieldsWidths[column] = newWidth
+              if (newWidth >= 50) { // TODO Change to constant
+                setColumnWidth(column, newWidth)
                 table.forceLayout()
               }
             }
-          }
-          onReleased: {
-            saveWidths();
           }
         }
       }
@@ -275,9 +96,8 @@ Item {
               sortOrder = 1;
             }
 
-            setSort()
+            applySort()
 
-            saveSort()
           }
         }
       }
@@ -298,45 +118,42 @@ Item {
 
 
     columnWidthProvider:
-        function (column) {
-          return fieldsWidths[column];
-        }
+        (column) => getColumnWidth(column)
 
+    model: tableRoot.sqlModel
 
-    model: sqlModel
-
-    //        selectionModel: ItemSelectionModel {
-    //           id: selecton
-    //        }
-
-    delegate:
-        DelegateChooser {
+    delegate: DelegateChooser {
       role:"Type"
 
       DelegateChoice {
-//        roleValue: "QString"
+        roleValue: "Bool"
+        CellBool {
+          value: model["Display"]
+        }
+      }
 
-        ItemDelegate {
-          id: delegate
-          //          implicitHeight: theme.basicElementSize
-          text: model["Display"]
-          highlighted: row % 2 == 0 //row === table.currentRow
-/*
-          background: Rectangle {
-            color: delegate.highlighted ? theme.highlightColor : row % 2 == 0 ? theme.backgroundColor : theme.interleaveColor
-          }
-*/
-          onClicked: {
-            table.currentRow = row
-          }
-          onDoubleClicked: {
-            tableRoot.editStatement = model["Index"]
-            table.currentRow = row
-            tableRoot.state = "editor"
-          }
+      DelegateChoice {
+        roleValue: "String"
+        CellString {
+          value: model["Display"]
+        }
+      }
+
+      DelegateChoice {
+        roleValue: "Numeric"
+        CellNumeric {
+          digits: model["Digits"]
+          value: model["Display"]
+        }
+      }
+
+      DelegateChoice {
+        CellBase {
+          value: model["Display"]
         }
       }
     }
+
     ScrollIndicator.vertical: ScrollIndicator {}
     ScrollIndicator.horizontal: ScrollIndicator {}
   }
@@ -354,8 +171,37 @@ Item {
             table.currentRow++;
             event.accepted = true;
           }
+          if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
+            startEditor()
+            event.accepted = true;
+          }
+        }else
+        if(tableRoot.state==="editor"){
+          if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
+            commitEditor(editorHolder)
+            tableRoot.state = ""
+            event.accepted = true;
+          }
+          if (event.key === Qt.Key_Escape) {
+            tableRoot.state = ""
+            event.accepted = true;
+          }
+//          if (event.key === Qt.Key_Up) {
+//            console.log("up")
+//            editorHolder.nextItemInFocusChain(false)
+//          }
+//          if (event.key === Qt.Key_Down) {
+//            console.log("down")
+//            editorHolder.nextItemInFocusChain(true)
+//          }
+
         }
       }
+
+  function startEditor(){
+    tableRoot.editStatement = sqlIndex(table.currentRow)
+    tableRoot.state = "editor"
+  }
 
   Row {
     id: searchRow
@@ -380,14 +226,13 @@ Item {
               newFilter=-1;
               break;
             }
-            if(fieldsWidths[newFilter]!==0)
+            if(getColumnWidth(newFilter)!==0)
               break;
           }
 
           filterField = newFilter;
 
-          sqlModel.setFilterColumn(filterField)
-          saveFilter()
+          applyFilter()
         }
       }
     }
@@ -405,9 +250,48 @@ Item {
   }
 
   Column {
-    id : editor
+    id : editorHolder
     visible : tableRoot.state==="editor"
     anchors.fill: parent
+
+    Loader {
+      width: parent.width
+      id: editorLoader
+    }
+
+
+    Row {
+      spacing: 10
+
+
+      Button {
+        id: btCancel
+        text: qsTr("Відміна")
+        onClicked: {
+          tableRoot.state = ""
+        }
+      }
+
+      Button {
+        id: btOk
+        text: qsTr("Ok")
+
+        onClicked: {
+          commitEditor(editorHolder)
+          tableRoot.state = ""
+        }
+      }
+    }
+
+
+    onVisibleChanged: {
+      if(editorHolder.visible){
+        prepareEditor(editorHolder)
+      }
+
+    }
+
+
 
   }
 

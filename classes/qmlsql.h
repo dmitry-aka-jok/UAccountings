@@ -2,11 +2,6 @@
 #define QMLSQL_H
 
 #include <QObject>
-#include <QQmlEngine>
-
-#include "qmlsqltable.h"
-
-#include "datapipe.h"
 
 class QmlSql : public QObject
 {
@@ -18,23 +13,19 @@ public:
         FK,
         String,
         Int,
-        Bool
+        Bool,
+        Numeric
     };
     Q_ENUM(FieldType)
 
 
-    explicit QmlSql(QObject *parent = nullptr);
-
-    Q_INVOKABLE void defineTable(QString name, QVariantMap fields);
-    Q_INVOKABLE QmlSqlTable *table(QString name);
+    static QmlSql* instance()
+    {
+        static QmlSql singleton;
+        return &singleton;
+    }
 
     static QString formatToSQL(QVariant val);
-
-private:
-    Datapipe *datapipe;
-
 };
-
-//Q_DECLARE_METATYPE(QmlSql::FieldType)
 
 #endif // QMLSQL_H

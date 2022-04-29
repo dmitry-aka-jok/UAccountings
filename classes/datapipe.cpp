@@ -7,6 +7,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
+#include <QJSEngine>
+
 Datapipe::Datapipe() : QObject(nullptr)
 {
     QString s = QCoreApplication::applicationDirPath() + "/" + QCoreApplication::applicationName();
@@ -49,15 +51,36 @@ QStringList Datapipe::tables()
     return m_tables.keys();
 }
 
-QVariantMap Datapipe::table(const QString &name)
+QVariantMap Datapipe::tableDefinition(const QString &name)
 {
     return m_tables.value(name).toMap();
 }
 
-void Datapipe::addTable(const QString &name, QVariantMap fields)
+void Datapipe::defineTable(const QString &name, QVariantMap fields)
 {
     m_tables[name] = fields;
 }
+
+QmlSqlTable *Datapipe::table(const QString &name)
+{
+    QmlSqlTable *qmltable = new QmlSqlTable();
+    qmltable->setTable(name);
+    qmltable->setFields(m_tables.value(name).toMap());
+
+    return qmltable;
+
+}
+
+//QString Datapipe::formatToSQL(QVariant val)
+//{
+//    QString type = val.metaType().name();
+//    if (type==u"QString"_qs)
+//        return u"'%1'"_qs.arg(val.toString());
+//    if (type==u"QDate"_qs || type==u"QDateTime"_qs || type==u"QTime"_qs)
+//        return u"'%1'"_qs.arg(val.toString());
+
+//    return val.toString();
+//}
 
 void Datapipe::setJsonMenu(const QByteArray &json)
 {
@@ -122,6 +145,25 @@ QString Datapipe::jsonMenu()
     return result;
 }
 
+QQuickItem *Datapipe::findTableField(QQuickItem *parent, const QString &name)
+{
+    if (parent==nullptr)
+        return nullptr;
+
+    const QList<QQuickItem *> &children = parent->childItems();
+    QQuickItem *obj;
+    for (int i = 0; i < children.size(); ++i) {
+        obj = children.at(i);
+        if (obj->property("field").toString() == name)
+            return obj;
+        else {
+            obj = findTableField(obj,  name);
+            if(obj!=nullptr)
+                return obj;
+        }
+    }
+    return nullptr;
+}
 
 
 QString Datapipe::inetAdresses()

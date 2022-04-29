@@ -18,6 +18,15 @@
         <file>store/modules/Template.qml</file>
         <file>store/main.qml</file>
         <file>store/qml/Contractors.qml</file>
-        <file>store/templates/TableEditor.qml</file>
+        <file>store/delegates/CellBase.js</file>
+        <file>store/delegates/CellBase.qml</file>
+        <file>store/delegates/CellBool.qml</file>
+        <file>store/delegates/CellString.qml</file>
+        <file>store/delegates/CellNumeric.qml</file>
+        <file>store/delegates/FieldBase.qml</file>
+        <file>store/delegates/FieldBool.qml</file>
+        <file>store/delegates/FieldNumeric.qml</file>
+        <file>store/delegates/FieldString.qml</file>
+        <file>store/delegates/FieldTitle.qml</file>
     </qresource>
 </RCC>
