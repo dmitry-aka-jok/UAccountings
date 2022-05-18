@@ -177,6 +177,20 @@ QString Datapipe::inetAdresses()
     return addr;
 }
 
+bool Datapipe::isSame(const QVariantMap &v1, const QVariantMap &v2)
+{
+    if(v1.count()!=v2.count())
+        return false;
+
+    for(QVariantMap::const_iterator iter = v1.constBegin(); iter != v1.constEnd(); ++iter) {
+        if(!v2.contains(iter.key()))
+            return false;
+        if(iter.value()!= v2.value(iter.key()))
+            return false;
+    }
+    return true;
+}
+
 
 
 

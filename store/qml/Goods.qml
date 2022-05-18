@@ -15,13 +15,21 @@ Table {
     {field:"price_buy", name:"Ціна закупівлі"},
     {field:"price_sell", name:"Ціна продажу"}
   ];
+  linkedTables : [
+    {table:"goods_barcodes", name:"Назва", key:"goods_id", foreign_key:"id",
+      fields : [
+        {field:"barcode", name:"Штрихкод"},
+      ]
+    }
+  ];
+
 
   editor: GridLayout {
     id: grid
     columns: 2
 
     FieldTitle {
-      value: "Назва"
+      text: "Назва"
     }
     FieldString {
       id:name
@@ -30,7 +38,7 @@ Table {
     }
 
     FieldTitle {
-      value: "Група"
+      text: "Група"
     }
     FieldString {
       id:goodsgroups_id
@@ -39,7 +47,7 @@ Table {
     }
 
     FieldTitle {
-      value: "Ваговий"
+      text: "Ваговий"
     }
     FieldBool {
       id:is_weight
@@ -48,7 +56,7 @@ Table {
     }
 
     FieldTitle {
-      value: "Ціна закупівлі"
+      text: "Ціна закупівлі"
     }
     FieldNumeric {
       id:price_buy
@@ -58,7 +66,7 @@ Table {
     }
 
     FieldTitle {
-      value: "Ціна продажу"
+      text: "Ціна продажу"
     }
     FieldNumeric {
       id:price_sell

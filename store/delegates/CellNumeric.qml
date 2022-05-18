@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-CellBase {
+CellData {
   id: cellRoot
   property int digits: 0
   contentItem:

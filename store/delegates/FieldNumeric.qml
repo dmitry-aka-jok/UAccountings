@@ -7,6 +7,7 @@ TextField {
   property alias value : fieldRoot.text
   property alias digits: validtr.decimals
   required property string field
+  selectByMouse: true
 
   verticalAlignment: Text.AlignVCenter
   horizontalAlignment: Text.AlignLeft

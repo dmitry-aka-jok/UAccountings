@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-CellBase {
+CellData {
   contentItem:
   Label {
     text : value

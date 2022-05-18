@@ -7,15 +7,14 @@
 
 
 QmlSqlModel::QmlSqlModel(QObject *parent) :
-    QSortFilterProxyModel(parent)
+    QSortFilterProxyModel(parent), m_serviceColumn(false), m_totalsRow(false), m_appendRow(false), m_filterColumn(-1)
+
 {
     setSourceModel(&sqlmodel);
-    m_filterColumn = -1;
 }
 
 QmlSqlModel::~QmlSqlModel()
 {
-    //   qDebug()<<"Destroy model"<<m_queryString;
 }
 
 
@@ -130,8 +129,7 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
         }
         else
         {
-            QRegularExpression re("join (\\w+) (\\w+)");
-            QRegularExpressionMatch match = re.match(svar);
+            QRegularExpressionMatch match = QRegularExpression("join (\\w+) (\\w+)").match(svar);
             if (match.hasMatch()) {
                 QString joinTable = match.captured(1);
                 QString joinAlias = match.captured(2);
@@ -296,7 +294,7 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
         queryHavings = u" HAVING %1"_qs.arg(queryHavings);
 
 
-    QString queryString = u"SELECT %1%2 FROM %3%4%5%6%7%8%9"_qs
+    m_queryString = u"SELECT %1%2 FROM %3%4%5%6%7%8%9"_qs
             .arg(queryPrefixs,
                  queryFields,
                  table,
@@ -307,19 +305,18 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
                  queryOrders,
                  queryHavings);
 
- //   qDebug()<<queryString;
 
     if(datapipe->variable("debugQueries", false).toBool())
-        qDebug()<<queryString;
+        qDebug()<<m_queryString;
 
 
     QSqlDatabase db = QSqlDatabase::database();
-    sqlmodel.setQuery(queryString, db);
+    sqlmodel.setQuery(m_queryString, db);
 
     if ( sqlmodel.lastError().isValid() )
     {
         qCritical()<<"Error in query";
-        qCritical()<<queryString;
+        qCritical()<<m_queryString;
         qCritical()<<sqlmodel.lastError().text();
 
         m_errorString = sqlmodel.lastError().text();
@@ -339,6 +336,28 @@ bool QmlSqlModel::exec(const QString &table, const QVariantMap &fields, const QV
         //        m_typeList.append(r.field(i).metaType().name());
     }
     emit rolesListChanged();
+
+    return true;
+}
+
+bool QmlSqlModel::reread()
+{
+    if(m_queryString.isEmpty())
+        return false;
+
+    sqlmodel.setQuery(m_queryString);
+
+    if ( sqlmodel.lastError().isValid() )
+    {
+        qCritical()<<"Error in query";
+        qCritical()<<m_queryString;
+        qCritical()<<sqlmodel.lastError().text();
+
+        m_errorString = sqlmodel.lastError().text();
+        emit errorOccurred();
+
+        return false;
+    }
 
     return true;
 }
@@ -369,14 +388,77 @@ void QmlSqlModel::setSort(int row, Qt::SortOrder order)
     sort(row, order);
 }
 
+void QmlSqlModel::setServiceColumn(bool serviceColumn)
+{
+    if(m_serviceColumn == serviceColumn)
+        return;
+
+    m_serviceColumn = serviceColumn;
+    emit serviceColumnChanged();
+}
+
+bool QmlSqlModel::serviceColumn()
+{
+    return m_serviceColumn;
+}
+
+void QmlSqlModel::setTotalsRow(bool totalsRow)
+{
+    if(m_totalsRow == totalsRow)
+        return;
+
+    m_totalsRow = totalsRow;
+    emit totalsRowChanged();
+}
+
+bool QmlSqlModel::totalsRow()
+{
+    return m_totalsRow;
+}
+
+void QmlSqlModel::setAppendRow(bool appendRow)
+{
+    if(m_appendRow == appendRow)
+        return;
+
+    m_appendRow = appendRow;
+    emit appendRowChanged();
+}
+
+bool QmlSqlModel::appendRow()
+{
+    return m_appendRow;
+}
+
+//QModelIndex QmlSqlModel::index(int row, int column, const QModelIndex& parent) const {
+//    return createIndex(row,column,row);
+//}
+
+//QModelIndex QmlSqlModel::parent(const QModelIndex &index) const {
+//    //Works only for non-tree models
+//    return QModelIndex();
+//}
+
+//QModelIndex QmlSqlModel::mapFromSource(const QModelIndex &source) const {
+//    return index(source.row(), source.column(), source.parent());
+//}
+
+//QModelIndex QmlSqlModel::mapToSource(const QModelIndex &proxy) const {
+//    return (sourceModel()&&proxy.isValid())
+//            ? sourceModel()->index(proxy.row(), proxy.column(), proxy.parent())
+//            : QModelIndex();
+//}
+
+
 QHash<int, QByteArray>QmlSqlModel::roleNames() const
 {
     QHash<int,QByteArray> hash;
 
     hash.insert(Qt::UserRole+1, "Display");
     hash.insert(Qt::UserRole+2, "Type");
-    hash.insert(Qt::UserRole+3, "Index");
-    hash.insert(Qt::UserRole+4, "Digits");
+    hash.insert(Qt::UserRole+3, "Digits");
+
+//    qDebug()<<hash;
 
     return hash;
 }
@@ -384,42 +466,48 @@ QHash<int, QByteArray>QmlSqlModel::roleNames() const
 QVariant QmlSqlModel::data(const QModelIndex &index, int role)const
 {
     QVariant value;
+//    qDebug()<<"data"<<index.row()<<index.column()<<role;
 
     if(role < Qt::UserRole)
     {
-        value = QSortFilterProxyModel::data(index, role);
+        if(m_serviceColumn && index.column()==0) // 0-service-column
+            return QString();
+
+        QModelIndex modelIndex = this->index( index.row(), index.column() + m_fieldsPK.count() - (m_serviceColumn?1:0));
+        value = QSortFilterProxyModel::data(modelIndex, role);
     }
     else
     {
-        if (role==Qt::UserRole+1){
-            QModelIndex modelIndex = this->index( index.row(), index.column() + m_fieldsPK.count());
+        if (role==Qt::UserRole+1){ // data
+            if(m_serviceColumn && index.column()==0) // 0-service-column
+                return QString();
+            if (index.row() == rowCount()-1 && m_appendRow)
+                return QString();
+
+            QModelIndex modelIndex = this->index( index.row(), index.column() + m_fieldsPK.count() - (m_serviceColumn?1:0));
             value = QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole);
         }
-        if (role==Qt::UserRole+2){
-            value = m_typeList.value(index.column());
+        if (role==Qt::UserRole+2){ // types
+            if (index.row() == rowCount()-1 && m_appendRow && index.column()==0)
+                return QString(u"Add"_qs);
+            if (index.row() == rowCount()-1 && m_appendRow && index.column()!=0)
+                return QString(u"Empty"_qs);
+            if (index.row() == rowCount()-1 && !m_appendRow && m_totalsRow)
+                return QString(u"Totals"_qs);
+            if (index.row() == rowCount()-2 && m_appendRow && m_totalsRow)
+                return QString(u"Totals"_qs);
+            // after rows -
+            if(m_serviceColumn && index.column()==0) // 0-service-column
+                return QString(u"Service"_qs);
+
+
+            value = m_typeList.value(index.column()-(m_serviceColumn?1:0));
         }
-        if (role==Qt::UserRole+4){
-            value = m_digitsList.value(index.column());
-        }
+        if (role==Qt::UserRole+3){ //digits
+            if(m_serviceColumn && index.column()==0) // 0-service-column
+                return 0;
 
-        if (role==Qt::UserRole+3){
-            QString vm;
-
-            QStringList fieldsPK;
-            fieldsPK<<m_fieldsPK.keys();
-
-            for(int i=0; i < m_fieldsPK.count(); i++){
-                QModelIndex modelIndex = this->index( index.row(), i);
-                QString app = (i==0)?u""_qs:u" and "_qs;
-                vm += u"%1%2.%3 = %4"_qs.arg(
-                            app,
-                            m_table,
-                            fieldsPK.at(i),
-                            QmlSql::formatToSQL(QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole))
-                            );
-            }
-
-            return vm;
+            value = m_digitsList.value(index.column()-(m_serviceColumn?1:0));
         }
     }
 
@@ -428,7 +516,13 @@ QVariant QmlSqlModel::data(const QModelIndex &index, int role)const
 
 int QmlSqlModel::columnCount(const QModelIndex &parent) const
 {
-    return QSortFilterProxyModel::columnCount(parent) - m_fieldsPK.count();
+    return QSortFilterProxyModel::columnCount(parent) - m_fieldsPK.count() + (m_serviceColumn?1:0);
+}
+
+int QmlSqlModel::rowCount(const QModelIndex &parent) const
+{
+//    qDebug()<<(QSortFilterProxyModel::rowCount(parent) + (m_appendRow?1:0) + (m_totalsRow?1:0));
+    return QSortFilterProxyModel::rowCount(parent) + (m_appendRow?1:0) + (m_totalsRow?1:0);
 }
 
 QVariantMap QmlSqlModel::sqlIndex(int row) const
@@ -439,7 +533,7 @@ QVariantMap QmlSqlModel::sqlIndex(int row) const
 
     for(int i=0, cnt = m_fieldsPK.count(); i < cnt; i++){
         QModelIndex modelIndex = this->index( row, i);
-        res.insert(fieldsPK.at(i),QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole));
+        res.insert(fieldsPK.at(i), QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole));
     }
     return res;
 }
@@ -448,18 +542,22 @@ QVariantMap QmlSqlModel::sqlIndex(int row) const
 
 bool QmlSqlModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-    //    if(m_filterColumn < -1)
-    //        return true;
-
     if(m_filterString.isEmpty() || m_filterString.isNull())
         return true;
 
+    int appended = (m_appendRow?1:0) - (m_totalsRow?1:0);
 
-    for(int i=0, cnt=columnCount();i<cnt;i++){
-        if(!(m_filterColumn == -1 || m_filterColumn == i))
+    if(appended > 0 && sourceRow >= (rowCount() - appended) )
+       return true;
+
+
+    int cntPK = m_fieldsPK.count();
+
+    for(int i=0, cnt=columnCount(); i<cnt; i++){
+        if(!(m_filterColumn == -1 || m_filterColumn + cntPK + (m_serviceColumn?1:0) == i))
             continue;
 
-        QModelIndex index = sourceModel()->index(sourceRow, i, sourceParent);
+        QModelIndex index = sourceModel()->index(sourceRow, i-(m_serviceColumn?1:0), sourceParent);
         QString data = sourceModel()->data(index, Qt::DisplayRole).value<QString>();
 
         if(data.contains(m_filterString, Qt::CaseInsensitive))
@@ -469,13 +567,38 @@ bool QmlSqlModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParen
     return false;
 }
 
+bool QmlSqlModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
+{
+    QModelIndex leftReal = sourceModel()->index(left.row(), left.column() + m_fieldsPK.count());
+    QModelIndex rightReal = sourceModel()->index(right.row(), right.column() + m_fieldsPK.count());
+
+    QString type = m_typeList.at(left.column());
+
+    if(type==u"Numeric"_qs){
+        return sourceModel()->data(leftReal).toDouble() < sourceModel()->data(rightReal).toDouble();
+    }
+    if(type==u"String"_qs){
+        return sourceModel()->data(leftReal).toString() < sourceModel()->data(rightReal).toString();
+    }
+    if(type==u"Bool"_qs){
+        return sourceModel()->data(leftReal).toBool() < sourceModel()->data(rightReal).toBool();
+    }
+
+
+    return sourceModel()->data(leftReal).toString() < sourceModel()->data(rightReal).toString();
+
+}
+
 QVariant QmlSqlModel::value(int row, int column, QVariant deflt) const
 {
 //    if(sqlmodel.columnCount()<(column+1) || sqlmodel.rowCount() < (row+1))
 //        return deflt;
 
-    QModelIndex modelIndex = sqlmodel.index(row, column + m_fieldsPK.count());
-    QVariant val = sqlmodel.data(modelIndex, Qt::DisplayRole);
+//    qDebug()<<column<<m_fieldsPK.count()<<-(m_serviceColumn?1:0);
+//    QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole)
+
+    QModelIndex modelIndex = QSortFilterProxyModel::index(row, column + m_fieldsPK.count() - (m_serviceColumn?1:0));
+    QVariant val = QSortFilterProxyModel::data(modelIndex, Qt::DisplayRole);
 
     if(val.isValid())
         return val;
@@ -485,5 +608,9 @@ QVariant QmlSqlModel::value(int row, int column, QVariant deflt) const
 
 QVariant QmlSqlModel::value(int row, QString column, QVariant deflt) const
 {
-    return value(row, m_roleList.indexOf(column), deflt);
+    int clmn = m_roleList.indexOf(column);
+    if(clmn>=0)
+        return value(row, clmn, deflt);
+    else
+        return deflt;
 }

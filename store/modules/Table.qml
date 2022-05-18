@@ -16,88 +16,109 @@ import "../delegates"
 UATable {
   id: tableRoot
 
-  property int headerHeight: 30
+  property int headerHeight: 50
 
+  property alias model: tableView.model
   property alias editor: editorLoader.sourceComponent;
 
-  property alias model: table.model
 
   Component.onCompleted: {
-    init()
+    tableInit()
     tableRoot.model = sqlModel
   }
 
+  RowLayout {
+    id: searchRow
+    anchors.top: parent.top
+    width: tableRoot.width
+    visible: tableRoot.state===""||tableRoot.state==="delete"
+
+    Label {
+      id: searchName
+      text: (filterField===-1)?"Всі стовпчики: ":(fields[filterField]["name"]+": ") // TODO change
+
+      MouseArea {
+        anchors.fill: parent
+        onClicked: {
+          let newFilter = filterField;
+          while (true){
+            newFilter++;
+            if(newFilter>=fields.length){
+              newFilter=-1;
+              break;
+            }
+            if(getColumnWidth(newFilter)!==0)
+              break;
+          }
+          filterField = newFilter;
+        }
+      }
+    }
+
+    TextField {
+      id: searchField
+      focus: true
+      placeholderText: qsTr("строка пошуку")
+      Layout.fillWidth: true
+      onTextChanged: {
+        sqlModel.setFilterString(searchField.text)
+      }
+    }
+  }
 
 
   HorizontalHeaderView {
     id: tableHeader
-    syncView: table
-    anchors.left: table.left
-    visible: tableRoot.state===""
+    syncView: tableView
+    anchors.left: tableView.left
+    anchors.top: parent.top
+    anchors.topMargin: searchRow.height
+    visible: tableRoot.state==="" || tableRoot.state==="delete"
 
-    delegate:
-        HeaderDelegate {
-      id: headerDelegate
-      text: fields[column]["name"]
-      implicitHeight: headerHeight
+    delegate: DelegateChooser {
+      DelegateChoice {
+        column: 0
+        Button {
+          icon.source:"qrc:/icons/fi-bs-delete.svg"
+          flat:true
+          width:headerHeight
 
-      Rectangle {
-        id: resizeHandle
-        color: Qt.darker(parent.color, 1.05)
-        height: parent.height
-        width: 10
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-
-        MouseArea {
-          anchors.fill: parent
-          drag{ target: parent; axis: Drag.XAxis }
-          hoverEnabled: true
-          cursorShape: Qt.SizeHorCursor
-          onMouseXChanged: {
-            if (drag.active) {
-              var newWidth = headerDelegate.width + mouseX
-              if (newWidth >= 50) { // TODO Change to constant
-                setColumnWidth(column, newWidth)
-                table.forceLayout()
-              }
-            }
+          onClicked: {
+            if (tableRoot.state === "delete")
+              tableRoot.state = ""
+            else
+              tableRoot.state = "delete"
           }
+
         }
       }
 
-      Image {
-        id: sortHandle
+      DelegateChoice {
+        HeaderDelegate {
+          id: headerDelegate
+          text: fieldProperty(column, "name")
 
-        source: (sortField!==column||sortOrder===0?"qrc:/icons/fi-bs-arrows-h-copy.svg":(sortOrder===1?"qrc:/icons/fi-bs-arrow-down.svg":"qrc:/icons/fi-bs-arrow-up.svg"))
+          implicitHeight: headerHeight
 
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: resizeHandle.left
-        anchors.rightMargin: 1
-        anchors.topMargin: 1
-        anchors.bottomMargin: 1
+          onWidthChanged: {
+            if (getColumnWidth(column) !== headerDelegate.width){
+              setColumnWidth(column, headerDelegate.width)
+              tableView.forceLayout()
+            }
+          }
 
-        width: 15
-        height: parent.height
-        fillMode: Image.PreserveAspectFit
-
-        MouseArea {
-          anchors.fill: parent
-          onClicked: {
-            if(sortField===column){
-              if (sortOrder===2){
-                sortOrder = 0
+          onSortClicked:  {
+            if(tableRoot.sortField===column){
+              if (tableRoot.sortOrder===2){
+                tableRoot.sortOrder = 0
               }else{
-                sortOrder += 1
+                tableRoot.sortOrder += 1
               }
             }
             else {
-              sortField = column
-              sortOrder = 1;
+              tableRoot.sortField = column
+              tableRoot.sortOrder = 1;
             }
-
-            applySort()
-
           }
         }
       }
@@ -105,25 +126,38 @@ UATable {
   }
 
   TableView {
-    id: table
+    id: tableView
     anchors.fill: parent
-    anchors.topMargin: tableHeader.height
+    anchors.topMargin: tableHeader.height + searchRow.height
     anchors.bottomMargin: searchField.height
 
     z:0
     reuseItems: true
     clip: true
-    visible: tableRoot.state===""
-    property int currentRow: 0
-
+    visible: tableRoot.state==="" || tableRoot.state==="delete"
 
     columnWidthProvider:
         (column) => getColumnWidth(column)
 
-    model: tableRoot.sqlModel
-
     delegate: DelegateChooser {
       role:"Type"
+
+      DelegateChoice {
+        roleValue: "Service"
+        CellService {}
+      }
+      DelegateChoice {
+        roleValue: "Add"
+        CellAdd {}
+      }
+      DelegateChoice {
+        roleValue: "Empty"
+        CellEmpty {}
+      }
+      DelegateChoice {
+        roleValue: "Totals"
+        CellTotals {}
+      }
 
       DelegateChoice {
         roleValue: "Bool"
@@ -148,7 +182,7 @@ UATable {
       }
 
       DelegateChoice {
-        CellBase {
+        CellData {
           value: model["Display"]
         }
       }
@@ -160,15 +194,15 @@ UATable {
 
   Keys.onPressed:
       (event)=> {
-        if(tableRoot.state===""){
+        if(tableRoot.state==="" || tableRoot.state==="delete"){
           if (event.key === Qt.Key_Up) {
-            if(table.currentRow > 0)
-            table.currentRow--;
+            if(tableRoot.currentRow > 0)
+            tableRoot.currentRow--;
             event.accepted = true;
           }
           if (event.key === Qt.Key_Down) {
-            if(table.currentRow < sqlModel.rowCount()-1)
-            table.currentRow++;
+            if(tableRoot.currentRow < sqlModel.rowCount()-1)
+            tableRoot.currentRow++;
             event.accepted = true;
           }
           if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
@@ -176,7 +210,7 @@ UATable {
             event.accepted = true;
           }
         }else
-        if(tableRoot.state==="editor"){
+        if(tableRoot.state==="edit" || tableRoot.state==="add"){
           if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
             commitEditor(editorHolder)
             tableRoot.state = ""
@@ -186,72 +220,24 @@ UATable {
             tableRoot.state = ""
             event.accepted = true;
           }
-//          if (event.key === Qt.Key_Up) {
-//            console.log("up")
-//            editorHolder.nextItemInFocusChain(false)
-//          }
-//          if (event.key === Qt.Key_Down) {
-//            console.log("down")
-//            editorHolder.nextItemInFocusChain(true)
-//          }
-
         }
       }
 
-  function startEditor(){
-    tableRoot.editStatement = sqlIndex(table.currentRow)
-    tableRoot.state = "editor"
-  }
-
-  Row {
-    id: searchRow
-    anchors.left: parent.left
-    anchors.bottom: parent.bottom
-    width: tableRoot.width
-    visible: tableRoot.state===""
-
-    Label {
-      id: searchName
-      anchors.verticalCenter: parent.verticalCenter
-      text: (filterField===-1)?"Всі стовпчики: ":(fields[filterField]["name"]+": ")
-
-      MouseArea {
-        anchors.fill: parent
-        onClicked: {
-          let newFilter = filterField;
-          while (true){
-            newFilter++;
-
-            if(newFilter>=fields.length){
-              newFilter=-1;
-              break;
-            }
-            if(getColumnWidth(newFilter)!==0)
-              break;
-          }
-
-          filterField = newFilter;
-
-          applyFilter()
-        }
-      }
+  function startEditor(newState){
+    if (newState === "edit"){
+      prepareEdit(editorHolder, tableRoot.currentRow)
+      tableRoot.state = "edit"
     }
-
-    TextField {
-      id: searchField
-      width: parent.width - searchName.width
-
-      focus: true
-      placeholderText: "строка пошуку"
-      onTextChanged: {
-        sqlModel.setFilterString(searchField.text)
-      }
+    if (newState === "add"){
+      prepareAdd(editorHolder)
+      tableRoot.state = "add"
     }
   }
+
 
   Column {
     id : editorHolder
-    visible : tableRoot.state==="editor"
+    visible : tableRoot.state==="edit" || tableRoot.state==="add"
     anchors.fill: parent
 
     Loader {
@@ -277,19 +263,32 @@ UATable {
         text: qsTr("Ok")
 
         onClicked: {
-          commitEditor(editorHolder)
-          tableRoot.state = ""
+          let result
+          if(tableRoot.hasOwnProperty("onEditCommited"))
+            result = tableRoot["onEditCommited"]()
+
+          if (result!==false){
+            if(tableRoot.state=="edit")
+              commitEdit(editorHolder)
+            if(tableRoot.state=="add")
+              commitAdd(editorHolder)
+
+
+            tableRoot.state = ""
+          }
         }
       }
     }
 
 
-    onVisibleChanged: {
-      if(editorHolder.visible){
-        prepareEditor(editorHolder)
-      }
-
-    }
+    //    onVisibleChanged: {
+    //      if(editorHolder.visible){
+    //        if (tableRoot.state === "edit")
+    //          prepareEdit(editorHolder)
+    //        if (tableRoot.state === "add")
+    //          prepareAdd(editorHolder)
+    //      }
+    //    }
 
 
 
@@ -303,7 +302,13 @@ UATable {
       name: ""
     },
     State {
-      name: "editor"
+      name: "edit"
+    },
+    State {
+      name: "add"
+    },
+    State {
+      name: "delete"
     }
   ]
 

@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Controls
 
-CellBase {
+CellData {
     contentItem: Switch {
         checked: value
-       // enabled: false
+        checkable: false
     }
 }

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 
 import UA.SQL
 
@@ -21,7 +22,7 @@ Table {
     columns: 2
 
     FieldTitle {
-      value: "Назва"
+      text: "Назва"
     }
     FieldString {
       id:name
@@ -29,12 +30,11 @@ Table {
       Layout.fillWidth : true
       onValueChanged:{
         shortname.value = name.value.replace("ФОП", "").trim()
-
       }
     }
 
     FieldTitle {
-      value: "Скорочення"
+      text: "Скорочення"
     }
     FieldString {
       id:shortname
@@ -46,7 +46,7 @@ Table {
     }
 
     FieldTitle {
-      value: "ІПН"
+      text: "ІПН"
     }
     FieldString {
       id:inn
@@ -56,10 +56,35 @@ Table {
       }
     }
   }
-/*
-  onEditStarted:{
+
+
+  function onEditStarted(){
+
+    return true
+  }
+
+
+  Dialog {
+      id: dialog
+      modal: true
+      standardButtons: Dialog.Ok
+      anchors.centerIn: parent
+      property alias text: label.text
+      Label {
+        id:label
+      }
+  }
+
+  function onEditCommited(){
+//    dialog.text = "Some fucking thing happens!"
+//    dialog.open()
+
+//    return false
+  }
+  function onEditRejected(){
 
   }
+  /*
   onEditFinished:{
 
   }

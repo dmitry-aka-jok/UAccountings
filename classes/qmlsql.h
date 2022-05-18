@@ -19,6 +19,7 @@ public:
     Q_ENUM(FieldType)
 
 
+
     static QmlSql* instance()
     {
         static QmlSql singleton;

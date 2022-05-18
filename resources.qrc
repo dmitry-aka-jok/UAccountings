@@ -28,5 +28,30 @@
         <file>store/delegates/FieldNumeric.qml</file>
         <file>store/delegates/FieldString.qml</file>
         <file>store/delegates/FieldTitle.qml</file>
+        <file>icons/fi-bs-add.svg</file>
+        <file>icons/fi-bs-remove.svg</file>
+        <file>store/delegates/CellService.qml</file>
+        <file>store/delegates/CellEmpty.qml</file>
+        <file>store/delegates/CellAdd.qml</file>
+        <file>store/delegates/CellTotals.qml</file>
+        <file>store/delegates/CellData.qml</file>
+        <file>icons/fi-bs-delete.svg</file>
+        <file>icons/fi-bs-document.svg</file>
+        <file>icons/fi-bs-download.svg</file>
+        <file>icons/fi-bs-exchange.svg</file>
+        <file>icons/fi-bs-filter.svg</file>
+        <file>icons/fi-bs-folder.svg</file>
+        <file>icons/fi-bs-level-down.svg</file>
+        <file>icons/fi-bs-level-up.svg</file>
+        <file>icons/fi-bs-list.svg</file>
+        <file>icons/fi-bs-menu-dots-vertical.svg</file>
+        <file>icons/fi-bs-menu-dots.svg</file>
+        <file>icons/fi-bs-redo.svg</file>
+        <file>icons/fi-bs-refresh.svg</file>
+        <file>icons/fi-bs-search.svg</file>
+        <file>icons/fi-bs-settings.svg</file>
+        <file>icons/fi-bs-sign-in.svg</file>
+        <file>icons/fi-bs-sign-out.svg</file>
+        <file>icons/fi-bs-undo.svg</file>
     </qresource>
 </RCC>
