@@ -10,27 +10,6 @@ QmlSqlTable::QmlSqlTable(QObject *parent)
 {
 }
 
-void QmlSqlTable::setTable(const QString &table)
-{
-    m_table = table;
-    emit tableChanged();
-}
-
-void QmlSqlTable::setFields(const QVariantMap &fields)
-{
-    m_fields = fields;
-    emit fieldsChanged();
-}
-
-QString QmlSqlTable::table()
-{
-    return m_table;
-}
-
-QVariantMap QmlSqlTable::fields()
-{
-    return m_fields;
-}
 
 bool QmlSqlTable::validate()
 {
@@ -40,10 +19,6 @@ bool QmlSqlTable::validate()
 
     if(m_table.isEmpty()){
         m_lastError = u"Can't validate with empty table name"_qs;
-        return false;
-    }
-    if(m_fields.isEmpty()){
-        m_lastError = u"Can't validate with empty table fields"_qs;
         return false;
     }
 
@@ -71,13 +46,20 @@ bool QmlSqlTable::validate()
 
 
 
-QmlSqlModel* QmlSqlTable::select(QVariantMap query)
+QmlSqlQuery* QmlSqlTable::select(QVariantMap queryMap)
 {
-    QmlSqlModel* model = new QmlSqlModel();
+    QmlSqlQuery* query = new QmlSqlQuery();
+    query->exec(m_table, queryMap);
 
-    model->exec(m_table, m_fields, query);
+    return query;
+}
 
-    return model;
+QmlSqlModel* QmlSqlTable::model(QVariantMap queryMap)
+{
+    QmlSqlModel* smodel = new QmlSqlModel();
+    smodel->exec(m_table, queryMap);
+
+    return smodel;
 }
 
 // TODO returns

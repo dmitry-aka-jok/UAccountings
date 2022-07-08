@@ -5,25 +5,24 @@
 #include <QVariant>
 
 #include "qmlsqlmodel.h"
+#include "qmlsqlquery.h"
+
+#include "macro.h"
 
 class QmlSqlTable : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString table MEMBER m_table READ table WRITE setTable NOTIFY tableChanged)
+
+    UA_PROP_RW(QString, table, setTable)
 
 public:
     explicit QmlSqlTable(QObject *parent = nullptr);
 
-
-    void setTable(const QString &table);
-    void setFields(const QVariantMap &fields);
-
-    QString table();
-    QVariantMap fields();
-
+    // compare and update to last level
     bool validate();
 
-    Q_INVOKABLE QmlSqlModel* select(QVariantMap query);
+    Q_INVOKABLE QmlSqlQuery* select(QVariantMap query);
+    Q_INVOKABLE QmlSqlModel* model(QVariantMap query);
 
     Q_INVOKABLE bool insert(QVariantMap fields, QVariantList returns);
     Q_INVOKABLE bool update(QVariantMap fields, QVariantMap conditions);
@@ -34,12 +33,8 @@ public:
     QString lastError();
 
 signals:
-    void tableChanged();
-    void fieldsChanged();
 
 private:
-    QString m_table;
-    QVariantMap m_fields;
     QString m_lastError;
 };
 

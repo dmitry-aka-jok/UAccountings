@@ -3,14 +3,28 @@
 #include "datapipe.h"
 
 #include "qmlsqltable.h"
+#include "qmldefaults.h"
+
 
 
 UATable::UATable(QQuickItem *parent) : QQuickItem(parent)
-  ,m_sortField(0), m_sortOrder(0), m_filterField(0)
-  ,isSortFieldChanged(false), isSortOrderChanged(false), isFilterFieldChanged(false)
-  ,isColumnWidthChanged(false)
+  ,m_sortField(0), m_sortOrder(0), m_filterColumn(-1)
+  ,saveSortField(false), saveSortOrder(false), saveFilterColumn(false),saveColumnWidth(false)
+  ,m_totalsRow(false), m_appendRow(false), m_serviceColumn(false)
 {
+    connect(this, &UATable::filterColumnChanged,  [=](){saveFilterColumn = true; applyFilter();});
+    connect(this, &UATable::filterStringChanged,  [=](){applyFilter();});
+    connect(this, &UATable::sortFieldChanged,     [=](){saveSortField   = true; applySort();});
+    connect(this, &UATable::sortOrderChanged,     [=](){saveSortOrder   = true; applySort();});
 
+
+    connect(this, &UATable::totalsRowChanged,      [=](){m_sortFilterModel.setTotalsRow(m_totalsRow);});
+    connect(this, &UATable::appendRowChanged,      [=](){m_sortFilterModel.setAppendRow(m_appendRow);});
+    connect(this, &UATable::serviceColumnChanged,  [=](){m_sortFilterModel.setServiceColumn(m_serviceColumn);});
+
+    setTotalsRow(false);
+    setAppendRow(true);
+    setServiceColumn(true);
 }
 
 UATable::~UATable()
@@ -22,11 +36,17 @@ void UATable::tableInit()
 {
     Datapipe *datapipe = Datapipe::instance();
 
+
     m_selectionFields.clear();
-    for(int i=0, cnt=m_fields.count(); i<cnt; i++){
-        QVariantMap fieldMap = m_fields.at(i).toMap();
+    m_editorFields.clear();
+
+
+    foreach (const auto& field,  m_fields){
+        QVariantMap fieldMap = field.toMap();
+
         QString foreignTable = fieldMap.value("foreign_table").toString();
 
+        m_editorFields.append(fieldMap.value("field").toString());
         if(foreignTable.isEmpty()){
             m_selectionFields.append(fieldMap.value("field").toString());
         }else{
@@ -39,23 +59,17 @@ void UATable::tableInit()
     }
 
 
-    m_sqlModel = datapipe->table(m_tableName)->select(
-                QVariantMap({
-                                {"fields", m_selectionFields},
-                                {"joins", m_selectionJoins}
-                            })
-                );
+    m_sortFilterModel.exec(m_tableName,
+                           QVariantMap({
+                                           {"fields", m_selectionFields},
+                                           {"joins", m_selectionJoins}
+                                       })
+                           );
 
-    connect(m_sqlModel, &QmlSqlModel::serviceColumnChanged, this, &UATable::serviceColumnChanged);
-    connect(m_sqlModel, &QmlSqlModel::appendRowChanged, this, &UATable::appendRowChanged);
-    connect(m_sqlModel, &QmlSqlModel::totalsRowChanged, this, &UATable::totalsRowChanged);
 
-    m_sqlModel->setServiceColumn(true);
-    m_sqlModel->setAppendRow(true);
+    QPointer<QmlSqlTable> serviceTable = datapipe->table(TABLE_SETTINGS);
 
-    QPointer<QmlSqlTable> serviceTable = datapipe->table(SERVICETABLE_SETTINGS);
-
-    QPointer<QmlSqlModel>sqlSettings =
+    QPointer<QmlSqlQuery>sqlSettings =
             serviceTable->select(QVariantMap({
                                                  {"fields","value"},
                                                  {"where", QVariantMap({
@@ -64,7 +78,7 @@ void UATable::tableInit()
                                                       {"user_id", datapipe->variable("user_id",-1)}}
                                                   )}
                                              }));
-    QStringList columnWidths = sqlSettings->value(0,0).toString().split(",");
+    QStringList columnWidths = sqlSettings->value(0).toString().split(",");
 
     // 0-service-column not needed in m_columnWidths
     for (int i = 0, cnt = m_fields.count(); i < cnt; i++) {
@@ -72,23 +86,23 @@ void UATable::tableInit()
             m_columnWidths.append(0);
         else
             if(i < columnWidths.length())
-              m_columnWidths.append(qMax(columnWidths.at(i).toInt(), DEFAULTS_TABLE_MINIMAL_WEIGHT));
+                m_columnWidths.append(qMax(columnWidths.at(i).toInt(), TABLE_MINIMAL_WIDTH));
             else
-              m_columnWidths.append(DEFAULTS_TABLE_MINIMAL_WEIGHT);
+                m_columnWidths.append(TABLE_MINIMAL_WIDTH);
     }
 
-    QPointer<QmlSqlModel>sqlFilterField =
+    QPointer<QmlSqlQuery>sqlFilterColumn =
             serviceTable->select(QVariantMap({
                                                  {"fields","value"},
                                                  {"where", QVariantMap({
                                                       {"section", m_tableName},
-                                                      {"option","filterField"},
+                                                      {"option","filterColumn"},
                                                       {"user_id", datapipe->variable("user_id",-1)}}
                                                   )}
                                              }));
-    m_filterField = sqlFilterField->value(0,0).toInt();
+    m_filterColumn = sqlFilterColumn->value(0).toInt();
 
-    QPointer<QmlSqlModel>sqlSortField =
+    QPointer<QmlSqlQuery>sqlSortField =
             serviceTable->select(QVariantMap({
                                                  {"fields","value"},
                                                  {"where", QVariantMap({
@@ -97,9 +111,9 @@ void UATable::tableInit()
                                                       {"user_id", datapipe->variable("user_id",-1)}}
                                                   )}
                                              }));
-    m_sortField = sqlSortField->value(0,0).toInt();
+    m_sortField = sqlSortField->value(0).toInt();
 
-    QPointer<QmlSqlModel>sqlSortOrder =
+    QPointer<QmlSqlQuery>sqlSortOrder =
             serviceTable->select(QVariantMap({
                                                  {"fields","value"},
                                                  {"where", QVariantMap({
@@ -108,39 +122,12 @@ void UATable::tableInit()
                                                       {"user_id", datapipe->variable("user_id",-1)}}
                                                   )}
                                              }));
-    m_sortOrder = sqlSortOrder->value(0,0).toInt();
-
+    m_sortOrder = sqlSortOrder->value(0).toInt();
 
     applyFilter();
     applySort();
-
-    //    emit modelChanged();
-
-    //   qDebug()<<"init complete";
-
 }
 
-QString UATable::tableName() const
-{
-    return m_tableName;
-}
-
-void UATable::setTableName(const QString &tableName)
-{
-    m_tableName = tableName;
-    emit tableNameChanged();
-}
-
-QVariantList UATable::fields()
-{
-    return m_fields;
-}
-
-void UATable::setFields(const QVariantList &fields)
-{
-    m_fields = fields;
-    emit fieldsChanged();
-}
 
 QVariant UATable::fieldProperty(int column, const QString &propertyName)
 {
@@ -152,120 +139,55 @@ QVariant UATable::fieldProperty(int column, const QString &propertyName)
     return m_fields.at(column-1).toMap().value(propertyName);
 }
 
-QVariantList UATable::linkedTables()
-{
-    return m_linkedTables;
-}
 
-void UATable::setLinkedTables(const QVariantList &linkedTables)
+QmlSqlModel *UATable::tableModel()
 {
-    m_linkedTables = linkedTables;
-}
-
-QAbstractItemModel *UATable::sqlModel()
-{
-    return qobject_cast<QAbstractItemModel*>(m_sqlModel);
+    //qobject_cast<QAbstractItemModel*>(
+    return &m_sortFilterModel;
 }
 
 QVariantMap UATable::sqlIndex(int row)
 {
-    return m_sqlModel->sqlIndex(row);
+    return m_sortFilterModel.sqlIndex(row);
 }
 
-int UATable::currentRow()
-{
-    return m_currentRow;
-}
 
-void UATable::setCurrentRow(int currentRow)
-{
-    if(m_currentRow == currentRow)
-        return;
-
-    m_currentRow = currentRow;
-    emit currentRowChanged();
-}
-
-//QVariantMap UATable::editStatement() const
-//{
-//    return m_editStatement;
-//}
-
-//void UATable::setEditStatement(QVariantMap editStatement)
-//{
-//    m_editStatement = editStatement;
-//}
-
-int UATable::filterField()
-{
-    return m_filterField;
-}
-
-void UATable::setFilterField(int filterField)
-{
-    m_filterField = filterField;
-    isFilterFieldChanged = true;
-    applyFilter();
-
-    emit filterFieldChanged();
-}
-
-int UATable::sortField()
-{
-    return m_sortField;
-}
-
-void UATable::setSortField(int sortField)
-{
-    m_sortField = sortField;
-    isSortFieldChanged = true;
-    applySort();
-
-    emit sortChanged();
-}
-
-int UATable::sortOrder()
-{
-    return m_sortOrder;
-}
-
-void UATable::setSortOrder(int sortOrder)
-{
-    m_sortOrder = sortOrder;
-    isSortOrderChanged = true;
-    applySort();
-
-    emit sortChanged();
-}
 
 void UATable::setColumnWidth(int column, int width)
 {
-    m_columnWidths[column-1] = width;
-    isColumnWidthChanged =  true;
+    if(m_serviceColumn && column==0)
+        return;
+
+    m_columnWidths[column - (m_serviceColumn?1:0)] = width;
+    saveColumnWidth = true;
 }
 
 int UATable::getColumnWidth(int column)
 {
-    if(column==0 || column-1 >= m_columnWidths.count())
-        return DEFAULTS_TABLE_SERVICE_WEIGHT;
+    if(m_serviceColumn && column==0)
+        return TABLE_SERVICE_WIDTH;
 
-    return m_columnWidths.at(column-1);
+    return m_columnWidths.at(column - (m_serviceColumn?1:0));
 }
 
 
 void UATable::applySort()
 {
-    if (m_sortOrder==0)
-        m_sqlModel->setSort(-1, Qt::AscendingOrder);
-    if (m_sortOrder==1)
-        m_sqlModel->setSort(m_sortField, Qt::AscendingOrder);
-    if (m_sortOrder==2)
-        m_sqlModel->setSort(m_sortField, Qt::DescendingOrder);
+    if(m_sortField < m_sortFilterModel.columnCount())
+    {
+        if (m_sortOrder==0)
+            m_sortFilterModel.setSort(-1, Qt::AscendingOrder);
+        if (m_sortOrder==1)
+            m_sortFilterModel.setSort(m_sortField, Qt::AscendingOrder);
+        if (m_sortOrder==2)
+            m_sortFilterModel.setSort(m_sortField, Qt::DescendingOrder);
+    }
 }
 
 void UATable::applyFilter()
 {
-    m_sqlModel->setFilterColumn(m_filterField);
+    m_sortFilterModel.setFilterString(m_filterString);
+    m_sortFilterModel.setFilterColumn(m_filterColumn);
 }
 
 
@@ -273,9 +195,9 @@ void UATable::applyFilter()
 void UATable::saveSettings() {
     Datapipe *datapipe = Datapipe::instance();
 
-    QPointer<QmlSqlTable> serviceTable = datapipe->table(SERVICETABLE_SETTINGS);
+    QPointer<QmlSqlTable> serviceTable = datapipe->table(TABLE_SETTINGS);
 
-    if(isColumnWidthChanged){
+    if(saveColumnWidth){
         QString sss;
         for (int i = 0, cnt = m_fields.length() ; i < cnt; i++) { // 0-column is service
             sss += (i==0?"":",")+QString::number(m_columnWidths.at(i));
@@ -291,9 +213,9 @@ void UATable::saveSettings() {
                     );
     }
 
-    if(isFilterFieldChanged)
+    if(saveFilterColumn)
         serviceTable->insert_or_update(
-                    QVariantMap({{"value",m_filterField}}),
+                    QVariantMap({{"value",m_filterColumn}}),
                     QVariantMap ({
                                      {"section",m_tableName},
                                      {"option","filterField"},
@@ -301,7 +223,7 @@ void UATable::saveSettings() {
                                  })
                     );
 
-    if(isSortFieldChanged)
+    if(saveSortField)
         serviceTable->insert_or_update(
                     QVariantMap({{"value",m_sortField}}),
                     QVariantMap ({
@@ -311,7 +233,7 @@ void UATable::saveSettings() {
                                  })
                     );
 
-    if(isSortOrderChanged)
+    if(saveSortOrder)
         serviceTable->insert_or_update(
                     QVariantMap({{"value",m_sortOrder}}),
                     QVariantMap ({
@@ -323,50 +245,25 @@ void UATable::saveSettings() {
 
 }
 
-void UATable::setServiceColumn(bool serviceColumn)
-{
-    m_sqlModel->setServiceColumn(serviceColumn);
-}
-
-bool UATable::serviceColumn()
-{
-    return m_sqlModel->serviceColumn();
-}
-
-void UATable::setTotalsRow(bool totalsRow)
-{
-    m_sqlModel->setTotalsRow(totalsRow);
-}
-
-bool UATable::totalsRow()
-{
-    return m_sqlModel->totalsRow();
-}
-
-void UATable::setAppendRow(bool appendRow)
-{
-    m_sqlModel->setAppendRow(appendRow);
-}
-
-bool UATable::appendRow()
-{
-    return m_sqlModel->appendRow();
-}
 
 void UATable::findCurrentRow()
 {
     Datapipe *datapipe = Datapipe::instance();
-
-    if(datapipe->isSame(m_editStatement, sqlIndex(m_currentRow)))
+    if(datapipe->isSame(m_editStatement, sqlIndex(m_currentRow))){
         return;
+    }
 
-    for(int i=0,cnt=m_sqlModel->rowCount(); i<cnt; i++ ){
+    for(int i=0,cnt=m_sortFilterModel.rowCount(); i<cnt; i++ ){
         if(datapipe->isSame(m_editStatement, sqlIndex(i))){
             m_currentRow = i;
             emit currentRowChanged();
-
+            return;
         }
     }
+
+
+    m_currentRow = 0;
+    emit currentRowChanged();
 }
 
 
@@ -380,16 +277,16 @@ void UATable::prepareEdit(QQuickItem *editor, int row)
 
     m_editStatement = sqlIndex(row);
 
-    QPointer<QmlSqlModel> editRecord =
+    QPointer<QmlSqlQuery> editRecord =
             editTable->select(QVariantMap({
-                                              {"fields", m_selectionFields},
-                                              {"joins", m_selectionJoins},
+                                              {"fields", m_editorFields},
                                               {"where", m_editStatement}
                                           })
                               );
 
+
     for(int i=0, cnt=m_fields.count(); i<cnt; i++){
-        m_beforeEdit.insert(m_fields.at(i).toMap().value("field").toString(), editRecord->value(0,i,-1));
+        m_beforeEdit.insert(m_fields.at(i).toMap().value("field").toString(), editRecord->value(0,-1));
     }
 
     loadToEditor(editor);
@@ -418,15 +315,15 @@ void UATable::loadToEditor(QQuickItem *parent)
                 // TODO work with types
                 if (obj->property("digits").toInt()!=0)
                     obj->setProperty("value",
-                                 QString::number(
-                                     m_beforeEdit.value(
-                                         obj->property("field").toString()
-                                     ).toDouble(),'f',obj->property("digits").toInt())
-                                 );
-            else
-                obj->setProperty("value", m_beforeEdit.value(obj->property("field").toString()));
-        }else
-           obj->setProperty("value", "");
+                                     QString::number(
+                                         m_beforeEdit.value(
+                                             obj->property("field").toString()
+                                             ).toDouble(),'f',obj->property("digits").toInt())
+                                     );
+                else
+                    obj->setProperty("value", m_beforeEdit.value(obj->property("field").toString()));
+            }else
+                obj->setProperty("value", "");
         }
 
         loadToEditor(obj);
@@ -445,7 +342,8 @@ void UATable::commitEdit(QQuickItem *editor)
 
     editTable->update(changes, m_editStatement);
 
-    m_sqlModel->reread();
+    m_sortFilterModel.reread();
+
     findCurrentRow();
 }
 
@@ -459,10 +357,9 @@ void UATable::commitAdd(QQuickItem *editor)
 
     compareToCommit(editor, &changes);
 
-//    qDebug()<<changes;
     QVariantList returns;
     editTable->insert(changes, returns);
-    m_sqlModel->reread();
+    m_sortFilterModel.reread();
 }
 
 void UATable::remove(int row)
@@ -473,22 +370,7 @@ void UATable::remove(int row)
 
     editTable->remove(sqlIndex(row));
 
-
-//    QPointer<QmlSqlModel> editRecord =
-//            editTable->select(QVariantMap({
-//                                              {"fields", m_selectionFields},
-//                                              {"joins", m_selectionJoins},
-//                                              {"where", m_editStatement}
-//                                          })
-//                              );
-
-//    for(int i=0, cnt=m_fields.count(); i<cnt; i++){
-//        m_beforeEdit.insert(m_fields.at(i).toMap().value("field").toString(), editRecord->value(0,i,-1));
-//    }
-
-    m_sqlModel->reread();
-
-
+    m_sortFilterModel.reread();
 }
 
 
@@ -501,16 +383,22 @@ void UATable::compareToCommit(QQuickItem *parent, QVariantMap *changes)
     QQuickItem *obj;
     for (int i = 0; i < children.size(); ++i) {
         obj = children.at(i);
-        if (m_beforeEdit.contains(obj->property("field").toString())){
-            if(obj->property("value") != m_beforeEdit.value(obj->property("field").toString())){
+        QVariant propObject = obj->property("field");
+
+        if(propObject.isValid()){
+            /*for update - look at old variant*/
+            if (m_beforeEdit.contains(obj->property("field").toString())){
+                if(obj->property("value") != m_beforeEdit.value(obj->property("field").toString())){
+                    changes->insert(obj->property("field").toString(), obj->property("value"));
+                }
+            }
+            else // for insert - add to list anytime
+            {
                 changes->insert(obj->property("field").toString(), obj->property("value"));
             }
         }
-        else{
-            if(!obj->property("field").toString().isEmpty())
-                changes->insert(obj->property("field").toString(), obj->property("value"));
-            compareToCommit(obj, changes);
-        }
+
+        compareToCommit(obj, changes);
     }
 }
 

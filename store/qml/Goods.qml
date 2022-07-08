@@ -10,7 +10,7 @@ Table {
   tableName: "goods"
   fields : [
     {field:"name", name:"Назва"},
-    {field:"goodsgroups_id", name:"Група", foreign_table:"goodsgroups", foreign_key:"id", foreign_name:"name"},
+    {field:"goodsgroup_id", name:"Група", foreign_table:"goodsgroups", foreign_key:"id", foreign_name:"name"},
     {field:"is_weight", name:"Ваговий"},
     {field:"price_buy", name:"Ціна закупівлі"},
     {field:"price_sell", name:"Ціна продажу"}
@@ -27,6 +27,7 @@ Table {
   editor: GridLayout {
     id: grid
     columns: 2
+    columnSpacing: 10
 
     FieldTitle {
       text: "Назва"
@@ -42,7 +43,7 @@ Table {
     }
     FieldString {
       id:goodsgroups_id
-      field: "goodsgroups_id"
+      field: "goodsgroup_id"
       Layout.fillWidth : true
     }
 

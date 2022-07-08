@@ -4,25 +4,26 @@
 #include <QQuickItem>
 
 #include "qmlsqlmodel.h"
+#include "macro.h"
 
 class UATable : public QQuickItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString tableName READ tableName WRITE setTableName NOTIFY tableNameChanged)
-    Q_PROPERTY(QVariantList fields READ fields WRITE setFields NOTIFY fieldsChanged)
-    Q_PROPERTY(QVariantList linkedTables READ linkedTables WRITE setLinkedTables NOTIFY linkedTablesChanged)
 
-    Q_PROPERTY(QAbstractItemModel* sqlModel READ sqlModel NOTIFY sqlModelChanged)
+    UA_PROP_RW(QString, tableName, setTableName)
+    UA_PROP_RW(QVariantList, fields, setFields)
+    UA_PROP_RW(QVariantList, linkedTables, setLinkedTables)
 
-    Q_PROPERTY(int currentRow READ currentRow WRITE setCurrentRow NOTIFY currentRowChanged)
+    UA_PROP_RW(int, currentRow, setCurrentRow)
 
-    Q_PROPERTY(int filterField READ filterField WRITE setFilterField NOTIFY filterFieldChanged)
-    Q_PROPERTY(int sortField READ sortField WRITE setSortField NOTIFY sortChanged)
-    Q_PROPERTY(int sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortChanged)
+    UA_PROP_RW(bool, serviceColumn, setServiceColumn)
+    UA_PROP_RW(bool, totalsRow, setTotalsRow)
+    UA_PROP_RW(bool, appendRow, setAppendRow)
 
-    Q_PROPERTY(bool serviceColumn READ serviceColumn WRITE setServiceColumn NOTIFY serviceColumnChanged)
-    Q_PROPERTY(bool totalsRow READ totalsRow WRITE setTotalsRow NOTIFY totalsRowChanged)
-    Q_PROPERTY(bool appendRow READ appendRow WRITE setAppendRow NOTIFY appendRowChanged)
+    UA_PROP_RW(int, filterColumn, setFilterColumn)
+    UA_PROP_RW(QString, filterString, setFilterString)
+    UA_PROP_RW(int, sortField, setSortField)
+    UA_PROP_RW(int, sortOrder, setSortOrder)
 
     QML_ELEMENT
 
@@ -32,44 +33,19 @@ public:
 
     Q_INVOKABLE void tableInit();
 
-    QString tableName() const;
-    void setTableName(const QString &tableName);
-
-    QVariantList fields();
-    void setFields(const QVariantList &fields);
-    Q_INVOKABLE QVariant fieldProperty(int column, const QString &propertyName);
-
-    QVariantList linkedTables();
-    void setLinkedTables(const QVariantList &linkedTables);
+    Q_INVOKABLE QmlSqlModel *tableModel();
 
 
-    QAbstractItemModel *sqlModel();
     Q_INVOKABLE QVariantMap sqlIndex(int row);
 
-    int currentRow();
-    void setCurrentRow(int currentRow);
-
-
-    int filterField();
-    void setFilterField(int filterField);
-    int sortField();
-    void setSortField(int sortField);
-    int sortOrder();
-    void setSortOrder(int sortOrder);
-
+    Q_INVOKABLE QVariant fieldProperty(int column, const QString &propertyName);
     Q_INVOKABLE void setColumnWidth(int column, int width);
     Q_INVOKABLE int getColumnWidth(int column);
+
 
     void applySort();
     void applyFilter();
     void saveSettings();
-
-    void setServiceColumn(bool serviceColumn);
-    bool serviceColumn();
-    void setTotalsRow(bool totalsRow);
-    bool totalsRow();
-    void setAppendRow(bool appendRow);
-    bool appendRow();
 
     void findCurrentRow();
 
@@ -83,45 +59,23 @@ private:
     void loadToEditor(QQuickItem *parent);
     void compareToCommit(QQuickItem *parent, QVariantMap *changes);
 
-signals:
-    void tableNameChanged();
-    void fieldsChanged();
-    void linkedTablesChanged();
-    void sqlModelChanged();
-    void currentRowChanged();
-    void filterFieldChanged();
-    void sortChanged();
-//    void editStatementChanged();
-    void serviceColumnChanged();
-    void totalsRowChanged();
-    void appendRowChanged();
-
-
 private:
-    QString m_tableName;
-    QVariantList m_fields;
-    QVariantList m_linkedTables;
-
-    int m_currentRow;
 
     QVariantList m_selectionFields;
     QVariantList m_selectionJoins;
 
-    QPointer<QmlSqlModel> m_sqlModel;
+    QVariantList m_editorFields;
+
+    QmlSqlModel m_sortFilterModel;
 
     QVariantMap m_editStatement;
     QVariantMap m_beforeEdit;
 
     QVector<int> m_columnWidths;
-    bool isColumnWidthChanged;
-    int m_filterField;
-    bool isFilterFieldChanged;
-    int m_sortField;
-    bool isSortFieldChanged;
-    int m_sortOrder;
-    bool isSortOrderChanged;
-
-
+    bool saveColumnWidth;
+    bool saveFilterColumn;
+    bool saveSortField;
+    bool saveSortOrder;
 };
 
 

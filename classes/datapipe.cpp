@@ -65,10 +65,8 @@ QmlSqlTable *Datapipe::table(const QString &name)
 {
     QmlSqlTable *qmltable = new QmlSqlTable();
     qmltable->setTable(name);
-    qmltable->setFields(m_tables.value(name).toMap());
 
     return qmltable;
-
 }
 
 //QString Datapipe::formatToSQL(QVariant val)
@@ -165,17 +163,17 @@ QQuickItem *Datapipe::findTableField(QQuickItem *parent, const QString &name)
     return nullptr;
 }
 
-
-QString Datapipe::inetAdresses()
+QString Datapipe::formatToSQL(const QVariant &val, SqlType::Value type)
 {
-    QString addr;
-    const QHostAddress &localhost = QHostAddress(QHostAddress::LocalHost);
-    for (const QHostAddress &address: QNetworkInterface::allAddresses()) {
-        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != localhost)
-             addr += (addr.isEmpty()?"":", ") + address.toString();
-    }
-    return addr;
+    if (type==SqlType::String)
+        return u"'%1'"_qs.arg(val.toString());
+    if (type==SqlType::Date || type==SqlType::DateTime || type==SqlType::Time)
+        return u"'%1'"_qs.arg(val.toString());
+
+    return val.toString();
 }
+
+
 
 bool Datapipe::isSame(const QVariantMap &v1, const QVariantMap &v2)
 {

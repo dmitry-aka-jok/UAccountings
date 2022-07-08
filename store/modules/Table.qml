@@ -8,6 +8,7 @@ import QtQuick.Layouts
 import Qt.labs.qmlmodels
 
 import UA.SQL
+import UA.Enums
 import UA.Datapipe
 
 import "../delegates"
@@ -18,13 +19,17 @@ UATable {
 
   property int headerHeight: 50
 
-  property alias model: tableView.model
+//  property alias model: tableView.model
   property alias editor: editorLoader.sourceComponent;
+
+
 
 
   Component.onCompleted: {
     tableInit()
-    tableRoot.model = sqlModel
+    tableView.model = tableModel()
+
+    searchField.focus=true
   }
 
   RowLayout {
@@ -35,12 +40,12 @@ UATable {
 
     Label {
       id: searchName
-      text: (filterField===-1)?"Всі стовпчики: ":(fields[filterField]["name"]+": ") // TODO change
+      text: (filterColumn===-1)?"Всі стовпчики: ":(fields[filterColumn]["name"]+": ") // TODO change
 
       MouseArea {
         anchors.fill: parent
         onClicked: {
-          let newFilter = filterField;
+          let newFilter = filterColumn;
           while (true){
             newFilter++;
             if(newFilter>=fields.length){
@@ -50,7 +55,7 @@ UATable {
             if(getColumnWidth(newFilter)!==0)
               break;
           }
-          filterField = newFilter;
+          filterColumn = newFilter;
         }
       }
     }
@@ -61,7 +66,7 @@ UATable {
       placeholderText: qsTr("строка пошуку")
       Layout.fillWidth: true
       onTextChanged: {
-        sqlModel.setFilterString(searchField.text)
+        setFilterString(searchField.text)
       }
     }
   }
@@ -89,7 +94,6 @@ UATable {
             else
               tableRoot.state = "delete"
           }
-
         }
       }
 
@@ -143,38 +147,38 @@ UATable {
       role:"Type"
 
       DelegateChoice {
-        roleValue: "Service"
+        roleValue: SqlType.ServiceColumn
         CellService {}
       }
       DelegateChoice {
-        roleValue: "Add"
+        roleValue: SqlType.AppendRow
         CellAdd {}
       }
       DelegateChoice {
-        roleValue: "Empty"
+        roleValue: SqlType.NaT
         CellEmpty {}
       }
       DelegateChoice {
-        roleValue: "Totals"
+        roleValue: SqlType.TotalsRow
         CellTotals {}
       }
 
       DelegateChoice {
-        roleValue: "Bool"
+        roleValue: SqlType.Bool
         CellBool {
           value: model["Display"]
         }
       }
 
       DelegateChoice {
-        roleValue: "String"
+        roleValue: SqlType.String
         CellString {
           value: model["Display"]
         }
       }
 
       DelegateChoice {
-        roleValue: "Numeric"
+        roleValue: SqlType.Numeric
         CellNumeric {
           digits: model["Digits"]
           value: model["Display"]
@@ -201,18 +205,21 @@ UATable {
             event.accepted = true;
           }
           if (event.key === Qt.Key_Down) {
-            if(tableRoot.currentRow < sqlModel.rowCount()-1)
+            if(tableRoot.currentRow < tableView.model.rowCount()-1)
             tableRoot.currentRow++;
             event.accepted = true;
           }
           if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
-            startEditor()
+            if(currentRow === tableView.model.rowCount()-1 && tableView.model.appendRow)
+              startEditor("add");
+            else
+              startEditor("edit");
             event.accepted = true;
           }
         }else
         if(tableRoot.state==="edit" || tableRoot.state==="add"){
           if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
-            commitEditor(editorHolder)
+            commitEditor()
             tableRoot.state = ""
             event.accepted = true;
           }
@@ -232,7 +239,33 @@ UATable {
       prepareAdd(editorHolder)
       tableRoot.state = "add"
     }
+    editorLoader.focus = true
+//    /firstElementFocus = true
   }
+
+
+  function commitEditor(){
+//    Datapipe.setVariable("debugQueries", true)
+
+    let result = true
+    if(tableRoot.hasOwnProperty("onEditCommited"))
+      result = tableRoot["onEditCommited"]()
+
+    if (result!==false){
+      if(tableRoot.state==="edit")
+        commitEdit(editorHolder)
+      if(tableRoot.state==="add")
+        commitAdd(editorHolder)
+
+
+      tableRoot.state = ""
+      searchField.focus = true
+    }
+
+//    Datapipe.setVariable("debugQueries", false)
+
+  }
+
 
 
   Column {
@@ -246,12 +279,13 @@ UATable {
     }
 
 
-    Row {
+    RowLayout {
       spacing: 10
 
 
       Button {
         id: btCancel
+//        Layout.preferredWidth: 150
         text: qsTr("Відміна")
         onClicked: {
           tableRoot.state = ""
@@ -260,26 +294,14 @@ UATable {
 
       Button {
         id: btOk
+        Layout.preferredWidth: btCancel.width
         text: qsTr("Ok")
 
         onClicked: {
-          let result
-          if(tableRoot.hasOwnProperty("onEditCommited"))
-            result = tableRoot["onEditCommited"]()
-
-          if (result!==false){
-            if(tableRoot.state=="edit")
-              commitEdit(editorHolder)
-            if(tableRoot.state=="add")
-              commitAdd(editorHolder)
-
-
-            tableRoot.state = ""
-          }
+          commitEditor()
         }
       }
     }
-
 
     //    onVisibleChanged: {
     //      if(editorHolder.visible){

@@ -7,17 +7,12 @@
 #include <QJSValue>
 #include <QQuickItem>
 
-#include "qmltreeelement.h"
-#include "qmltreemodel.h"
+#include "qmltypes.h"
 #include "qmlsqltable.h"
 #include "qmlsqlmodel.h"
 
 
-#define SERVICETABLE_SETTINGS u"settings"_qs
-#define SERVICETABLE_USERS u"users"_qs
 
-#define DEFAULTS_TABLE_MINIMAL_WEIGHT 50
-#define DEFAULTS_TABLE_SERVICE_WEIGHT 30
 
 
 class Datapipe : public QObject
@@ -44,13 +39,12 @@ public:
     QVariantMap tableDefinition(const QString &name);
     Q_INVOKABLE QmlSqlTable *table(const QString &name);
 
-
     Q_INVOKABLE void setJsonMenu(const QByteArray &json);
     Q_INVOKABLE QString jsonMenu();
 
     Q_INVOKABLE QQuickItem *findTableField(QQuickItem *parent, const QString& name);
+    static QString formatToSQL(const QVariant &val, SqlType::Value type = SqlType::NaT);
 
-    Q_INVOKABLE QString inetAdresses();
 
     bool isSame(const QVariantMap &v1, const QVariantMap &v2);
 

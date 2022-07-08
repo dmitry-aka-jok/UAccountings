@@ -5,6 +5,9 @@
 
 #include <QSqlDatabase>
 #include <QSqlError>
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
+
 
 #include <QQmlContext>
 
@@ -14,13 +17,10 @@
 
 #include "build_defs.h"
 #include "classes/datapipe.h"
-#include "classes/qmlsql.h"
+#include "classes/qmltypes.h"
 
 #include "classes/qmlsqltable.h"
 #include "classes/qmlsqlmodel.h"
-
-#include "classes/qmltreemodel.h"
-#include "classes/qmltreeelement.h"
 
 #include "classes/uatable.h"
 
@@ -111,14 +111,35 @@ int main(int argc, char *argv[])
     if (parser.isSet(silentOption))
         datapipe->getSettings()->setValue("global/loglevel", 1);
 
+    static QRegularExpression regexpInt("^\\d*$");  // a digit (\d), zero or more times (*)
+    static QRegularExpression regexpDouble("^\\d*\\.\\d*$");  // a digit (\d), zero or more times (*)
+
 
     QStringList paramsList = parser.value(paramsOption).split(",");
     for(const QString &paramSingle : qAsConst(paramsList))
     {
         QStringList paramSingleList = paramSingle.split("=");
-        if (paramSingleList.count() == 2)
-            datapipe->getSettings()->setValue(paramSingleList.at(0), paramSingleList.at(1));
+        if (paramSingleList.count() == 2){
+            QString param = paramSingleList.at(0);
+            QString value = paramSingleList.at(1);
 
+
+            if(value==u"true"_qs || value==u"yes"_qs)
+                datapipe->getSettings()->setValue(param, true);
+            else
+                if(value==u"false"_qs || value==u"no"_qs)
+                    datapipe->getSettings()->setValue(param, false);
+                else
+                    if( regexpInt.match(value).hasMatch())
+                        datapipe->getSettings()->setValue(param, value.toInt());
+                    else
+                        if( regexpDouble.match(value).hasMatch())
+                        datapipe->getSettings()->setValue(param, value.toDouble());
+                        else
+                            datapipe->getSettings()->setValue(param, value);
+
+
+        }
     }
 
 
@@ -155,7 +176,7 @@ int main(int argc, char *argv[])
         QStringList copyList;
         copyList<<u":/store/"_qs;
         QStringList skipList;
-//        skipList<<u":/UAccounting/init/"_qs;
+        //        skipList<<u":/UAccounting/init/"_qs;
 
         for(const auto &cp : copyList){
             QDirIterator it(cp, {u"*.qml"_qs,u"*.js"_qs,u"*.json"_qs,u"*.conf"_qs}, QDir::Files, QDirIterator::Subdirectories);
@@ -203,16 +224,17 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("UA.Datapipe",1,0, "Datapipe", datapipe);
 
 
-    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQLCore", QmlSql::instance());
-    qRegisterMetaType<QmlSql::FieldType>("SQLCore::FieldType");
+    //    qmlRegisterSingletonInstance("UA.SQL",1,0, "SQLCore", QmlSql::instance());
+    //    qRegisterMetaType<QmlSql::FieldType>("SQLCore::FieldType");
+
+    qmlRegisterUncreatableMetaObject(SqlType::staticMetaObject,"UA.Enums", 1, 0, "SqlType", "Access to enums & flags only");
+    qRegisterMetaType<SqlType::Value>("SqlType");
+
 
     qmlRegisterType<UATable>("UA.SQL",1,0, "UATable");
 
     qmlRegisterType<QmlSqlTable>("UA.SQL",1,0, "SQLTable");
     qmlRegisterType<QmlSqlModel>("UA.SQL",1,0, "SQLModel");
-
-    qmlRegisterType<QmlTreeModel>("UA.Tree",1,0, "TreeModel");
-    qmlRegisterType<QmlTreeElement>("UA.Tree",1,0, "TreeElement");
 
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,

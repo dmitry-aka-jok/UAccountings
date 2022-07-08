@@ -15,6 +15,7 @@
         "type":"Menu",
         "name":"Довідники",
         "items":[
+                {"type":"Item", "name":"Групи товарів",    "qml": "qml/Groups.qml"},
                 {"type":"Item", "name":"Товари",    "qml": "qml/Goods.qml"},
                 {"type":"Item", "name":"Клієнти",   "qml": "qml/Contractors.qml"}
                 ]

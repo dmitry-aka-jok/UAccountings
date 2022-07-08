@@ -12,18 +12,21 @@ find_package(Qt6 6.3 COMPONENTS Quick Sql REQUIRED)
 
 qt_add_executable(appUAccounting
     build_defs.h
+
+
+    classes/macro.h
     classes/datapipe.h
     classes/datapipe.cpp
-    classes/qmlsql.h
-    classes/qmlsql.cpp
+
+    classes/qmltypes.h
+    classes/qmldefaults.h
+
     classes/qmlsqltable.h
     classes/qmlsqltable.cpp
     classes/qmlsqlmodel.h
     classes/qmlsqlmodel.cpp
-    classes/qmltreeelement.h
-    classes/qmltreeelement.cpp
-    classes/qmltreemodel.h
-    classes/qmltreemodel.cpp
+    classes/qmlsqlquery.h
+    classes/qmlsqlquery.cpp
 
     classes/uatable.h
     classes/uatable.cpp

@@ -53,5 +53,7 @@
         <file>icons/fi-bs-sign-in.svg</file>
         <file>icons/fi-bs-sign-out.svg</file>
         <file>icons/fi-bs-undo.svg</file>
+        <file>store/qml/Groups.qml</file>
+        <file>store/delegates/FieldLookup.qml</file>
     </qresource>
 </RCC>
